@@ -1,0 +1,311 @@
+import React, { useState } from 'react';
+import Fuse from 'fuse.js';
+import { Link } from 'react-router-dom';
+import { useBusiness } from '../context/BusinessContext';
+import { useLocation } from '../context/LocationContext';
+import { BusinessCard } from '../components/BusinessCard';
+import { CategoryFilter } from '../components/CategoryFilter';
+import { SearchBar } from '../components/SearchBar';
+import { MapPreview } from '../components/MapPreview';
+import { CitySearch } from '../components/CitySearch';
+import type { Category } from '../types';
+
+export const Home: React.FC = () => {
+    const { businesses, loading, error, lastUpdated, sortBy, setSortBy, refreshBusinesses } = useBusiness();
+    const { currentCity, currentState, userLocation } = useLocation();
+    const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isOpenOnly, setIsOpenOnly] = useState(false);
+
+    const isBusinessOpen = (business: any) => {
+        if (business.forced_status === 'open') return true;
+        if (business.forced_status === 'closed') return false;
+
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        return currentTime >= business.open_time && currentTime <= business.close_time;
+    };
+
+    // Helper for normalization
+    const normalizeString = (str: string) => {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    };
+
+    // Auto-import when city changes if list is empty
+    React.useEffect(() => {
+        if (currentCity && currentCity !== 'Todas' && currentCity !== 'Uberaba') {
+            const normCurrentCity = normalizeString(currentCity);
+
+            // Check if we have businesses in this city
+            const hasBusinesses = businesses.some(b =>
+                b.city && normalizeString(b.city) === normCurrentCity
+            );
+
+            if (!hasBusinesses) {
+                console.log(`City changed to ${currentCity} (norm: ${normCurrentCity}), auto-importing...`);
+                // Trigger a generic search to populate
+                // We use "Restaurante" as a safe default to get some content
+                fetch('/api/search/hybrid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        term: 'Restaurante',
+                        city: currentCity,
+                        lat: userLocation?.lat,
+                        lng: userLocation?.lng
+                    })
+                }).then(res => {
+                    if (res.ok) refreshBusinesses();
+                }).catch(console.error);
+            }
+        }
+    }, [currentCity, businesses, userLocation, refreshBusinesses]);
+
+    // Fuse.js Search
+    const fuse = React.useMemo(() => {
+        if (!businesses.length) return null;
+        return new Fuse(businesses, {
+            keys: ['name', 'description', 'category'],
+            threshold: 0.3,
+            distance: 100,
+        });
+    }, [businesses]);
+
+    const filteredBusinesses = React.useMemo(() => {
+        let result = businesses;
+
+        // 1. Search
+        if (searchQuery && fuse) {
+            result = fuse.search(searchQuery).map((r: any) => r.item);
+        }
+
+        // 2. Category Filter
+        if (selectedCategory !== 'All') {
+            result = result.filter(b => {
+                if (!b.category) return false;
+                // 1. Exact Match (for default categories like 'Alimentação')
+                if (b.category === selectedCategory) return true;
+
+                // 2. Normalized Match (for custom categories where ID is slugified)
+                // e.g. Business="DIARISTA" -> slug="diarista" === selected="diarista"
+                const normCategory = b.category.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+                return normCategory === selectedCategory;
+            });
+        }
+
+        // 3. Open Only Filter
+        if (isOpenOnly) {
+            result = result.filter(isBusinessOpen);
+        }
+
+        // 4. Location Filter
+        if (currentCity && currentState) {
+            const normCity = normalizeString(currentCity);
+            const normState = normalizeString(currentState);
+            const isDefaultLoc = normCity === 'uberaba' && normState === 'mg';
+
+            result = result.filter(b => {
+                // If business has no location set (legacy), show it for Uberaba/MG default
+                if (!b.city || !b.state) {
+                    return isDefaultLoc;
+                }
+
+                const bCity = normalizeString(b.city);
+                const bState = normalizeString(b.state);
+
+                // Handle "Todas" (All) logic
+                const cityMatch = normCity === 'todas' || bCity === normCity;
+                const stateMatch = normState === 'todas' || bState === normState;
+
+                return cityMatch && stateMatch;
+            });
+        }
+
+        return result;
+    }, [businesses, searchQuery, selectedCategory, isOpenOnly, fuse, currentCity, currentState]);
+
+    // Businesses are already sorted by distance in Context if userLocation is available
+    const businessesWithDistance = filteredBusinesses;
+
+
+    if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Top Logo Header */}
+            <div className="bg-gray-900 py-3 px-4 border-b border-gray-800">
+                <div className="max-w-7xl mx-auto flex justify-center md:justify-start">
+                    <img
+                        src="/logo-neon-final.png"
+                        alt="OpenNow Logo"
+                        className="h-16 md:h-20 object-contain"
+                    />
+                </div>
+            </div>
+
+            {/* Hero Banner */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+
+                    {/* Left Side: Advertising Space */}
+                    <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-blue-300/50 bg-blue-800/30 p-8 text-center hover:bg-blue-800/40 transition-colors group cursor-pointer">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <h3 className="text-2xl font-bold text-blue-100 mb-2">Sua Marca Aqui</h3>
+                        <p className="text-blue-200 mb-4">Alcance milhares de clientes em Uberaba.</p>
+                        <span className="inline-block bg-white/10 backdrop-blur-sm text-white px-6 py-2 rounded-full text-sm font-semibold border border-white/20 group-hover:bg-white group-hover:text-blue-600 transition-all">
+                            Anuncie Conosco
+                        </span>
+                    </div>
+
+                    {/* Right Side: User Focus CTA */}
+                    <div className="text-center md:text-left space-y-6">
+                        <div>
+                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-4">
+                                Descubra quem está <br className="hidden md:block" />
+                                <span className="text-yellow-400">ABERTO AGORA</span> na sua cidade.
+                            </h1>
+                            <p className="text-lg text-blue-100 max-w-lg mx-auto md:mx-0">
+                                Encontre restaurantes, serviços e lojas abertos neste exato momento. Sem perda de tempo.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center md:justify-start gap-4">
+                            <Link
+                                to="/login"
+                                className="w-full sm:w-auto bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-blue-50 hover:scale-105 transition-all transform flex items-center justify-center gap-2"
+                            >
+                                <span>Ver empresas abertas agora</span>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </Link>
+                            <Link
+                                to="/login"
+                                className="text-blue-100 hover:text-white font-medium underline decoration-blue-300 underline-offset-4 transition-colors"
+                            >
+                                Já tenho conta
+                            </Link>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Location Selector */}
+            <div className="bg-blue-800 text-white py-2 px-4 flex justify-center items-center gap-2">
+                <CitySearch />
+            </div>
+
+
+
+            {/* Header / Search */}
+            <div className="bg-white shadow-sm sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="flex flex-col space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                                <span className="flex items-center text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 animate-pulse">
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span>
+                                    Radar Ativo
+                                </span>
+                                {lastUpdated && (
+                                    <span className="text-[10px] text-gray-400">
+                                        Atualizado: {lastUpdated.toLocaleTimeString()}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={() => setIsOpenOnly(!isOpenOnly)}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${isOpenOnly
+                                        ? 'bg-green-100 text-green-800 border-green-200 border'
+                                        : 'bg-gray-100 text-gray-600 border-gray-200 border hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {isOpenOnly ? '🟢 Abertos Agora' : '⚪ Mostrar todos'}
+                                </button>
+
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as 'distance' | 'rating')}
+                                    className="px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="distance">📍 Mais Próximos</option>
+                                    <option value="rating">⭐ Melhor Avaliados</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <SearchBar
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            onSearch={async (term) => {
+                                if (!term) return;
+                                // Call Hybrid Search
+                                try {
+                                    const res = await fetch('/api/search/hybrid', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            term,
+                                            city: currentCity || 'Uberaba',
+                                            lat: userLocation?.lat,
+                                            lng: userLocation?.lng
+                                        })
+                                    });
+                                    if (res.ok) {
+                                        // Refresh businesses from context to see new imports
+                                        await refreshBusinesses();
+                                    }
+                                } catch (e) {
+                                    console.error("Search failed", e);
+                                }
+                            }}
+                        />
+
+                        <CategoryFilter
+                            selected={selectedCategory}
+                            onSelect={setSelectedCategory}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Map Preview Section */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+                <MapPreview />
+            </div>
+
+            {/* Business List */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {businessesWithDistance.map((business) => (
+                        <BusinessCard
+                            key={business.business_id}
+                            business={business}
+                            distance={(business as any)._distance ? ((business as any)._distance < 1 ? `${Math.round((business as any)._distance * 1000)} m` : `${(business as any)._distance.toFixed(1)} km`) : undefined}
+                            isOpen={isBusinessOpen(business)}
+                        />
+                    ))}
+                </div>
+
+                {businessesWithDistance.length === 0 && (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 text-lg">Nenhum negócio encontrado.</p>
+                        <button
+                            onClick={() => {
+                                setSelectedCategory('All');
+                                setSearchQuery('');
+                                setIsOpenOnly(false);
+                            }}
+                            className="mt-4 text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+                )}
+            </main>
+        </div >
+    );
+};

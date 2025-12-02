@@ -1,0 +1,114 @@
+{
+  "users": [
+    {
+      "id": "1764154993017",
+      "phone": "+5511999999999",
+      "createdAt": 1764154993017
+    },
+    {
+      "user_id": "1764155350027",
+      "phone_number": "+5511999999999",
+      "type": "partner",
+      "created_at": 1764155350027,
+      "last_login": 1764155688598
+    }
+  ],
+  "codes": [],
+  "business": [
+    {
+      "business_id": "1764155700062",
+      "owner_id": "1764155350027",
+      "name": "Padaria do Teste",
+      "category": "Food",
+      "description": "Melhor pão da cidade",
+      "open_time": "08:00",
+      "close_time": "18:00",
+      "forced_status": "closed",
+      "whatsapp": "11999999999",
+      "latitude": -19.747,
+      "longitude": -47.939,
+      "created_at": 1764155700062,
+      "updated_at": 1764162454910,
+      "is_premium": true,
+      "subscription_status": "active"
+    },
+    {
+      "business_id": "1764176775190",
+      "owner_id": "1764155350027",
+      "name": "Teste Rodrigo",
+      "category": "Services",
+      "description": "Impressao 3D",
+      "open_time": "08:00",
+      "close_time": "18:00",
+      "forced_status": null,
+      "whatsapp": "5534984278200",
+      "latitude": -19.747,
+      "longitude": -47.939,
+      "is_premium": false,
+      "analytics": {
+        "views": 0,
+        "clicks": 0,
+        "appearances": 0
+      },
+      "created_at": 1764176775190,
+      "updated_at": 1764176775190
+    }
+  ],
+  "verification_codes": [
+    {
+      "phone_number": "+5511999999999+5511999999999",
+      "code": "942730",
+      "expires_at": 1764155772713,
+      "attempts": 0
+    },
+    {
+      "phone_number": "34984278200",
+      "code": "169240",
+      "expires_at": 1764168635054,
+      "attempts": 0
+    }
+  ],
+  "subscriptions": [
+    {
+      "subscription_id": "sub_1764167459313",
+      "business_id": "1764155700062",
+      "plan": "premium",
+      "status": "active",
+      "start_date": 1764177248414,
+      "renew_date": 1766769248414,
+      "amount": 99.9
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": "tx_1764167459313",
+      "business_id": "1764155700062",
+      "amount": 99.9,
+      "status": "paid",
+      "date": 1764167459313,
+      "method": "credit_card",
+      "card_last4": "1234"
+    },
+    {
+      "transaction_id": "tx_1764167471810",
+      "business_id": "1764155700062",
+      "amount": 99.9,
+      "status": "paid",
+      "date": 1764167471810,
+      "method": "credit_card",
+      "card_last4": "1234"
+    },
+    {
+      "transaction_id": "tx_1764177248414",
+      "business_id": "1764155700062",
+      "amount": 99.9,
+      "status": "paid",
+      "date": 1764177248414,
+      "method": "credit_card",
+      "card_last4": "1234"
+    }
+  ],
+  "events": [],
+  "user_preferences": [],
+  "logs_notifications": []
+}
