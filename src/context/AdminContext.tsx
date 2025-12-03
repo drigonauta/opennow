@@ -75,6 +75,7 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [stats, setStats] = useState<Stats | null>(null);
+    console.log('AdminContext loaded v2 - Fix Applied');
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
