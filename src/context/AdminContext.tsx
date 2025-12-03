@@ -90,14 +90,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const handleSync = async () => {
         setIsSyncing(true);
         try {
+            const token = localStorage.getItem('admin_token');
             const res = await fetch('/api/admin/sync', {
                 method: 'POST',
-                headers: { Authorization: `Bearer admin-secret-token` }
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 alert('Sincronização enviada com sucesso! O site deve atualizar em instantes.');
             } else {
-                alert('Erro ao sincronizar.');
+                alert('Erro ao sincronizar. Verifique se você está logado.');
             }
         } catch (error) {
             console.error(error);
@@ -110,7 +111,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const fetchData = async () => {
         setLoading(true);
         try {
-            const token = 'admin-secret-token';
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                setLoading(false);
+                return; // Wait for login
+            }
 
             const [statsRes, businessRes, leadsRes, categoriesRes] = await Promise.all([
                 fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
@@ -120,16 +125,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ]);
 
             if (statsRes.ok) setStats(await statsRes.json());
-
-            if (businessRes.ok) {
-                const data = await businessRes.json();
-                setBusinesses(data);
-            }
-
-            if (leadsRes.ok) {
-                const leadsData = await leadsRes.json();
-                setLeads(leadsData);
-            }
+            if (businessRes.ok) setBusinesses(await businessRes.json());
+            if (leadsRes.ok) setLeads(await leadsRes.json());
             if (categoriesRes.ok) setCategories(await categoriesRes.json());
 
         } catch (error) {

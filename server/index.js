@@ -897,19 +897,45 @@ app.get('/api/leads/:uid', async (req, res) => {
 // --- ADMIN ROUTES ---
 
 // Middleware for Admin (Simple hardcoded check for MVP)
+// Middleware for Admin
 const authenticateAdmin = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    // In a real app, verify admin role from token claims or DB
-    // For MVP, we'll accept a specific "admin-token" or check if user is the specific admin
+    if (!token) return res.sendStatus(401);
+
+    // Dev/Legacy Bypass
     if (token === 'admin-secret-token' || token === 'dev-token') {
         req.user = { id: 'admin', role: 'admin' };
-        next();
-    } else {
-        return res.sendStatus(403);
+        return next();
     }
+
+    // Verify JWT
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        if (user.role !== 'admin') return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
 };
+
+// Admin Login Route
+app.post('/api/admin/login', (req, res) => {
+    const { email, password } = req.body;
+    const adminPassword = process.env.ADMIN_PANEL_PASSWORD;
+
+    if (!adminPassword) {
+        console.error('ADMIN_PANEL_PASSWORD not set in environment variables');
+        return res.status(500).json({ error: 'Server misconfiguration' });
+    }
+
+    if (email === 'admin@openow.io' && password === adminPassword) {
+        const token = jwt.sign({ id: 'admin', role: 'admin', email }, JWT_SECRET, { expiresIn: '24h' });
+        res.json({ success: true, token });
+    } else {
+        res.status(401).json({ error: 'Invalid credentials' });
+    }
+});
 
 // 5. Admin: Delete Lead
 app.delete('/api/admin/lead/:uid', authenticateAdmin, async (req, res) => {

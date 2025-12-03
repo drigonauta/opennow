@@ -32,10 +32,12 @@ import { AdminApprovals } from './pages/admin/AdminApprovals';
 import { AdminLocations } from './pages/admin/AdminLocations';
 import { AdminLeads } from './pages/admin/AdminLeads';
 import { AdminCategories } from './pages/admin/AdminCategories';
+import AdminLogin from './pages/admin/AdminLogin'; // Import Login
 import { AdminImport } from './pages/AdminImport';
 import { GoogleMapDemo } from './pages/GoogleMapDemo';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RequireLeadAuth } from './components/RequireLeadAuth';
+import RequireAdminAuth from './components/RequireAdminAuth'; // Import Auth Wrapper
 
 import { ChatButton } from './components/Noni/ChatButton';
 import { ChatWindow } from './components/Noni/ChatWindow';
@@ -96,15 +98,20 @@ const App: React.FC = () => {
                     </Route>
 
                     {/* Admin Routes */}
-                    <Route path="/admin" element={<AdminLayout />}>
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/admin" element={
+                      <RequireAdminAuth>
+                        <AdminLayout />
+                      </RequireAdminAuth>
+                    }>
                       <Route index element={<AdminOverview />} />
                       <Route path="businesses" element={<AdminBusinesses />} />
                       <Route path="approvals" element={<AdminApprovals />} />
                       <Route path="locations" element={<AdminLocations />} />
                       <Route path="leads" element={<AdminLeads />} />
                       <Route path="categories" element={<AdminCategories />} />
+                      <Route path="import" element={<AdminImport />} />
                     </Route>
-                    <Route path="/admin/import" element={<AdminImport />} />
                     <Route path="/google-map" element={<GoogleMapDemo />} />
                   </Routes>
 
