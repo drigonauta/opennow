@@ -6,7 +6,7 @@ import { useLocation } from '../context/LocationContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { ArrowLeft, MapPin, Clock, Phone, Share2, Heart, Star, Award, ShieldCheck, Navigation, Car, Bike, Bus, Plane } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
-import { formatWhatsAppLink } from '../lib/utils';
+import { createWhatsAppMessageLink } from '../lib/utils';
 import { ClaimBusinessModal } from '../components/ClaimBusinessModal';
 
 export const BusinessDetails: React.FC = () => {
@@ -14,7 +14,7 @@ export const BusinessDetails: React.FC = () => {
     const { businesses } = useBusiness();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { user, trackAction } = useAuth();
-    const { userLocation, calculateDistance } = useLocation();
+    const { userLocation, calculateDistance, currentCity } = useLocation();
     const [reviews, setReviews] = useState<any[]>([]);
     const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const [showReviewForm, setShowReviewForm] = useState(false);
@@ -100,15 +100,20 @@ export const BusinessDetails: React.FC = () => {
             console.error("Failed to log whatsapp click", e);
         }
 
-        const whatsappLink = formatWhatsAppLink(business.whatsapp);
+        const whatsappLink = createWhatsAppMessageLink(
+            business.whatsapp,
+            business.name,
+            business.business_id,
+            user?.displayName,
+            currentCity
+        );
 
         if (!whatsappLink) {
             alert("WhatsApp não disponível para este estabelecimento.");
             return;
         }
 
-        const message = encodeURIComponent("Olá! Vim direto pelo aplicativo OpeNow.");
-        window.open(`${whatsappLink}?text=${message}`, '_blank');
+        window.open(whatsappLink, '_blank');
     };
 
     const submitReview = async (e: React.FormEvent) => {

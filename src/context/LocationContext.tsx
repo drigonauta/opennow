@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, type ReactNode } from 'react';
 
 interface LocationContextType {
     currentState: string;
@@ -29,31 +29,7 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [currentCity, setCurrentCity] = useState<string>(localStorage.getItem('openow_city') || 'Uberaba');
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-    useEffect(() => {
-        // Real-time GPS Tracking
-        if (navigator.geolocation) {
-            const watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    console.log("📍 GPS Updated:", position.coords.latitude, position.coords.longitude);
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                },
-                (error) => {
-                    console.error("Error watching location:", error);
-                    // Don't set fallback here, let UI handle "no gps" state
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-
-            return () => navigator.geolocation.clearWatch(watchId);
-        }
-    }, []);
+    // Removed auto-watch useEffect to prevent overriding selected city
 
     const setLocation = (state: string, city: string) => {
         setCurrentState(state);
@@ -65,12 +41,47 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     const detectLocation = async () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
                     setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
+                        lat: latitude,
+                        lng: longitude
                     });
-                    // Here we could reverse geocode to get city/state
+
+                    // Reverse Geocode to get City/State
+                    try {
+                        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+                        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`);
+                        const data = await response.json();
+
+                        if (data.results && data.results.length > 0) {
+                            const addressComponents = data.results[0].address_components;
+                            let city = '';
+                            let state = '';
+
+                            for (const component of addressComponents) {
+                                if (component.types.includes('administrative_area_level_2')) {
+                                    city = component.long_name;
+                                }
+                                if (component.types.includes('administrative_area_level_1')) {
+                                    state = component.short_name;
+                                }
+                            }
+
+                            // Fallback if level 2 is missing
+                            if (!city) {
+                                const locality = addressComponents.find((c: any) => c.types.includes('locality'));
+                                if (locality) city = locality.long_name;
+                            }
+
+                            if (city && state) {
+                                console.log(`📍 GPS Detected: ${city} - ${state}`);
+                                setLocation(state, city);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Reverse geocoding failed:", error);
+                    }
                 },
                 (error) => {
                     console.error("Error detecting location:", error);

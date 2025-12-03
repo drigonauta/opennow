@@ -24,6 +24,7 @@ export interface Business {
     review_count?: number;
     user_ratings_total?: number;
     is_premium?: boolean;
+    plan?: 'free' | 'gold' | 'diamond';
     analytics?: {
         views: number;
         clicks: number;

@@ -27,3 +27,37 @@ export function formatWhatsAppLink(phone: string | undefined | null): string | n
     // This handles cases where it might be an international number without +
     return `https://wa.me/${cleaned}`;
 }
+
+export function createWhatsAppMessageLink(
+    phone: string | undefined | null,
+    businessName: string,
+    businessId: string,
+    userName?: string | null,
+    cityName?: string | null
+): string | null {
+    const formattedPhone = formatWhatsAppLink(phone);
+    if (!formattedPhone) return null;
+
+    const name = userName || "um cliente do OpenNow";
+    const city = cityName || "minha cidade";
+
+    const message = `
+Olá! Meu nome é ${name} 😊
+Encontrei a empresa **${businessName}** aqui no OpenNow e gostaria de mais informações.
+
+📍 Estou em ${city}
+🌐 Página oficial da empresa no OpenNow:
+https://openow.io/empresa/${businessId}
+
+Se você for o proprietário dessa empresa, pode reivindicar sua página gratuitamente e atualizá-la sempre que quiser:
+
+🔑 https://openow.io/reivindicar/${businessId}
+
+Mensagem automática enviada pelo OpenNow —
+descubra quem está aberto agora na sua cidade.`.trim();
+
+    const encodedMessage = encodeURIComponent(message);
+    // formatWhatsAppLink returns the base url, we need to append the text parameter
+    // But formatWhatsAppLink returns `https://wa.me/...`, so we can just append `?text=...`
+    return `${formattedPhone}?text=${encodedMessage}`;
+}

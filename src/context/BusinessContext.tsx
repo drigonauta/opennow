@@ -7,7 +7,7 @@ interface BusinessContextType {
     businesses: Business[];
     addBusiness: (business: Omit<Business, 'business_id' | 'owner_id' | 'created_at' | 'updated_at' | 'forced_status'>) => Promise<void>;
     updateBusinessStatus: (id: string, status: 'open' | 'closed' | null) => Promise<void>;
-    filterByCategory: (category: Category) => Business[];
+    filterByCategory: () => Business[];
     getOpenBusinesses: () => Business[];
     getMyBusinesses: () => Business[];
     userLocation: { lat: number; lng: number } | null;
@@ -33,7 +33,7 @@ const BusinessContext = createContext<BusinessContextType | undefined>(undefined
 
 
 export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { userLocation, calculateDistance } = useLocation();
+    const { userLocation, calculateDistance, currentCity, currentState } = useLocation();
     const { user } = useAuth();
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [distances, setDistances] = useState<Record<string, string>>({});
@@ -72,8 +72,26 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, []);
 
     const fetchBusinesses = React.useCallback(async () => {
+        setLoading(true);
+        // Do not clear businesses here to prevent blinking
+
         try {
-            const response = await fetch(`/api/business/list?t=${Date.now()}`);
+            let url = `/api/business/list?`;
+
+            // Add City/State Filter
+            if (currentCity && currentCity !== 'Todas') {
+                url += `&city=${encodeURIComponent(currentCity)}`;
+                if (currentState && currentState !== 'Todas') {
+                    url += `&state=${encodeURIComponent(currentState)}`;
+                }
+            }
+
+            // Add Category Filter (Server-side)
+            if (selectedCategory && selectedCategory !== 'All') {
+                url += `&category=${encodeURIComponent(selectedCategory)}`;
+            }
+
+            const response = await fetch(url);
             if (response.ok) {
                 const data: Business[] = await response.json();
 
@@ -101,15 +119,18 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
         } catch (error) {
             console.error("Failed to fetch businesses:", error);
+            setError("Failed to load businesses");
+        } finally {
+            setLoading(false);
         }
-    }, [userLocation, calculateDistance]);
+    }, [userLocation, calculateDistance, currentCity, currentState, selectedCategory]);
 
     // Poll for updates every 60 seconds (Time-based status)
     useEffect(() => {
         fetchBusinesses();
         const interval = setInterval(fetchBusinesses, 60000);
         return () => clearInterval(interval);
-    }, [fetchBusinesses]); // Re-run when userLocation changes
+    }, [fetchBusinesses]); // Re-run when userLocation or selectedCategory changes
 
     const refreshBusinesses = async () => {
         setLoading(true);
@@ -200,16 +221,16 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return currentTime >= openTime && currentTime < closeTime;
     };
 
-    const filterByCategory = (category: Category) => {
+    const filterByCategory = () => {
         let filtered = businesses;
 
+        // 1. Open Only Filter (Client-side)
         if (isOpenOnly) {
             filtered = filtered.filter(isOpenNow);
         }
 
-        if (category !== 'All') {
-            filtered = filtered.filter(b => b.category === category);
-        }
+        // Note: Category and City filtering is now handled server-side in fetchBusinesses.
+        // We trust 'businesses' to already contain the correct filtered list.
 
         // Apply Sorting
         if (sortBy === 'rating') {
@@ -222,7 +243,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     // Derived state for consumers
-    const filteredBusinesses = filterByCategory(selectedCategory);
+    const filteredBusinesses = filterByCategory();
 
     const getOpenBusinesses = () => {
         return businesses.filter(isOpenNow);

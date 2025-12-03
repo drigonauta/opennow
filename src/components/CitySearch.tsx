@@ -1,136 +1,160 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
-import React, { useEffect, useRef } from 'react';
-import { Crosshair } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Crosshair, Search, MapPin } from 'lucide-react';
 import { useLocation } from '../context/LocationContext';
-
-declare global {
-    interface Window {
-        google: any;
-    }
-}
 
 export const CitySearch: React.FC = () => {
     const { currentCity, currentState, setLocation, detectLocation } = useLocation();
-    const pickerRef = useRef<any>(null);
+    const [inputValue, setInputValue] = useState(`${currentCity}, ${currentState}`);
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
 
+    // Sync input with context changes (e.g. GPS detection)
     useEffect(() => {
-        // @ts-expect-error - Exposing for debugging/external use
-        window.locationContext = { setLocation };
-    }, [setLocation]);
-
-    const processPlace = React.useCallback((place: any) => {
-        console.log("📍 Processing Place:", place);
-        console.log("📍 Address Components:", place.address_components);
-        console.log("📍 Formatted Address:", place.formatted_address);
-        let city = '';
-        let state = '';
-        let country = '';
-
-        // 1. Try Address Components
-        if (place.address_components) {
-            for (const component of place.address_components) {
-                const types = component.types;
-                if (types.includes('locality')) {
-                    city = component.long_name;
-                }
-                if (types.includes('administrative_area_level_1')) {
-                    state = component.short_name;
-                }
-                if (types.includes('country')) {
-                    country = component.short_name;
-                }
-                // Fallback for city
-                if (!city && types.includes('administrative_area_level_2')) {
-                    city = component.long_name;
-                }
-                if (!city && types.includes('sublocality_level_1')) {
-                    city = component.long_name;
-                }
-            }
+        if (currentCity && currentState) {
+            setInputValue(`${currentCity}, ${currentState}`);
+        } else if (currentCity) {
+            setInputValue(currentCity);
         }
+    }, [currentCity, currentState]);
 
-        // 2. Fallback: Try Formatted Address (e.g. "Jaú - SP, Brasil")
-        if ((!city || !state) && place.formatted_address) {
-            console.log("⚠️ Using formatted_address fallback");
-            const parts = place.formatted_address.split(',').map((p: string) => p.trim());
-            // Expected formats: "City - State, Country" or "City, State, Country"
-
-            // Try to find State (2 chars)
-            const statePartIndex = parts.findIndex((p: string) => /^[A-Z]{2}$/.test(p) || /\s[A-Z]{2}$/.test(p));
-
-            if (statePartIndex !== -1) {
-                const statePart = parts[statePartIndex];
-                // Extract "SP" from "Jaú - SP" or just "SP"
-                const stateMatch = statePart.match(/[A-Z]{2}$/);
-                if (stateMatch) state = stateMatch[0];
-
-                // City is usually before state
-                if (statePartIndex > 0) {
-                    const cityPart = parts[statePartIndex - 1];
-                    // Remove " - SP" suffix if present in city part
-                    city = cityPart.replace(/\s-\s[A-Z]{2}$/, '').trim();
-                } else if (parts[0].includes('-')) {
-                    // Handle "Jaú - SP" in first part
-                    const split = parts[0].split('-');
-                    if (split.length > 1) {
-                        city = split[0].trim();
-                        const potentialState = split[1].trim();
-                        if (potentialState.length === 2) state = potentialState;
-                    }
-                }
-            }
-        }
-
-        console.log(`📍 Extracted: ${city}, ${state}`);
-
-        // Logic to determine scope
-        if (city && state) {
-            // Specific City
-            setLocation(state, city);
-        } else if (state) {
-            // Whole State
-            setLocation(state, 'Todas');
-        } else if (country) {
-            // Whole Country
-            setLocation('Todas', 'Todas');
-        } else {
-            // Fallback
-            console.warn("Could not determine location, defaulting to Todas");
-            setLocation('Todas', 'Todas');
-        }
-    }, [setLocation]);
-
+    // Close suggestions when clicking outside
     useEffect(() => {
-        const picker = pickerRef.current;
-        if (!picker) return;
-
-        const handlePlaceChange = () => {
-            const place = picker.value;
-            if (place) {
-                processPlace(place);
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
             }
-        };
-
-        picker.addEventListener('gmpx-placechange', handlePlaceChange);
+        }
+        document.addEventListener("mousedown", handleClickOutside);
         return () => {
-            picker.removeEventListener('gmpx-placechange', handlePlaceChange);
+            document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [processPlace]);
+    }, [wrapperRef]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setInputValue(value);
+
+        if (!value || value.length < 3) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        if (window.google && window.google.maps && window.google.maps.places) {
+            const service = new window.google.maps.places.AutocompleteService();
+            service.getPlacePredictions({
+                input: value,
+                types: ['(cities)'],
+                componentRestrictions: { country: 'br' }
+            }, (predictions: any[], status: any) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                    setSuggestions(predictions);
+                    setShowSuggestions(true);
+                } else {
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                }
+            });
+        }
+    };
+
+    const handleSelectSuggestion = (prediction: any) => {
+        // Prediction description format: "Uberaba - MG, Brasil"
+        const text = prediction.description;
+        setInputValue(text);
+        setShowSuggestions(false);
+
+        // Extract City and State
+        // Format usually: "City - State, Country" or "City, State, Country"
+        const parts = text.split('-').map((p: string) => p.trim());
+
+        let city = parts[0];
+        let state = currentState;
+
+        // Try to find state in the second part (e.g. "MG, Brasil")
+        if (parts.length > 1) {
+            const statePart = parts[1].split(',')[0].trim(); // Get "MG" from "MG, Brasil"
+            if (statePart.length === 2) {
+                state = statePart;
+            }
+        } else {
+            // Fallback for comma separation: "Uberaba, MG, Brasil"
+            const commaParts = text.split(',').map((p: string) => p.trim());
+            if (commaParts.length > 1) {
+                city = commaParts[0];
+                const potentialState = commaParts[1];
+                if (potentialState.length === 2) state = potentialState;
+            }
+        }
+
+        console.log(`📍 Selected: ${city}, ${state}`);
+        setLocation(state, city);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            setShowSuggestions(false);
+            // Parse input to separate City and State if possible
+            const parts = inputValue.split(',').map(p => p.trim());
+            let newCity = parts[0];
+            let newState = currentState;
+
+            if (parts.length > 1) {
+                const statePart = parts[1].toUpperCase();
+                if (statePart.length === 2) {
+                    newState = statePart;
+                }
+            }
+
+            if (newCity) {
+                setLocation(newState, newCity);
+            }
+        }
+    };
 
     const handleGPS = async () => {
         await detectLocation();
     };
 
     return (
-        <div className="flex items-center gap-2">
-            <div className="relative group flex items-center z-50 w-80">
-                {/* @ts-expect-error - Web Component */}
-                <gmpx-place-picker
-                    ref={pickerRef}
-                    placeholder={`${currentCity}, ${currentState}`}
-                    style={{ width: '100%' }}
-                ></gmpx-place-picker>
+        <div className="flex items-center gap-2 w-full max-w-md" ref={wrapperRef}>
+            <div className="relative flex-1 group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => {
+                        if (suggestions.length > 0) setShowSuggestions(true);
+                    }}
+                    placeholder="Cidade, Estado"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-transparent rounded-lg leading-5 bg-white/10 text-white placeholder-blue-200 focus:outline-none focus:bg-white/20 focus:ring-0 sm:text-sm transition-colors"
+                />
+
+                {/* Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto py-1 text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                        {suggestions.map((suggestion) => (
+                            <div
+                                key={suggestion.place_id}
+                                onClick={() => handleSelectSuggestion(suggestion)}
+                                className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 text-gray-900 flex items-center gap-2"
+                            >
+                                <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+                                <span className="block truncate font-medium">
+                                    {suggestion.structured_formatting.main_text}
+                                </span>
+                                <span className="text-gray-500 text-xs truncate">
+                                    {suggestion.structured_formatting.secondary_text}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <button

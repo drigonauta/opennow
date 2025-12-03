@@ -14,6 +14,7 @@ import { Register } from './pages/Register';
 import { RegisterLead } from './pages/RegisterLead';
 import { Login } from './pages/Login';
 import { RegisterBusiness } from './pages/RegisterBusiness';
+import { ClaimPage } from './pages/ClaimPage';
 
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/dashboard/DashboardHome';
@@ -22,8 +23,15 @@ import { BusinessEditor } from './pages/dashboard/BusinessEditor';
 import { PremiumPage } from './pages/dashboard/PremiumPage';
 import { Analytics } from './pages/dashboard/Analytics';
 import { FinancePage } from './pages/dashboard/FinancePage';
+import { MarketingPanel } from './pages/dashboard/MarketingPanel';
 import { ReferralPage } from './pages/dashboard/ReferralPage';
-import { AdminDashboard } from './pages/dashboard/AdminDashboard';
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminOverview } from './pages/admin/AdminOverview';
+import { AdminBusinesses } from './pages/admin/AdminBusinesses';
+import { AdminApprovals } from './pages/admin/AdminApprovals';
+import { AdminLocations } from './pages/admin/AdminLocations';
+import { AdminLeads } from './pages/admin/AdminLeads';
+import { AdminCategories } from './pages/admin/AdminCategories';
 import { AdminImport } from './pages/AdminImport';
 import { GoogleMapDemo } from './pages/GoogleMapDemo';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -67,6 +75,7 @@ const App: React.FC = () => {
                     <Route path="/register-business" element={<RegisterBusiness />} />
                     <Route path="/map" element={<MapPage />} />
                     <Route path="/business/:id" element={<RequireLeadAuth><BusinessDetails /></RequireLeadAuth>} />
+                    <Route path="/reivindicar/:id" element={<ClaimPage />} />
 
                     {/* Legacy/Alias Routes */}
                     <Route path="/open-now" element={<Home />} />
@@ -81,11 +90,20 @@ const App: React.FC = () => {
                       <Route path="premium" element={<PremiumPage />} />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="finance" element={<FinancePage />} />
+                      <Route path="finance" element={<FinancePage />} />
+                      <Route path="marketing" element={<MarketingPanel />} />
                       <Route path="referral" element={<ReferralPage />} />
                     </Route>
 
-                    {/* Admin Route */}
-                    <Route path="/admin" element={<AdminDashboard />} />
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminOverview />} />
+                      <Route path="businesses" element={<AdminBusinesses />} />
+                      <Route path="approvals" element={<AdminApprovals />} />
+                      <Route path="locations" element={<AdminLocations />} />
+                      <Route path="leads" element={<AdminLeads />} />
+                      <Route path="categories" element={<AdminCategories />} />
+                    </Route>
                     <Route path="/admin/import" element={<AdminImport />} />
                     <Route path="/google-map" element={<GoogleMapDemo />} />
                   </Routes>

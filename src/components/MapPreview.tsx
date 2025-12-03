@@ -48,7 +48,7 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
 };
 
 export const MapPreview: React.FC = () => {
-    const { businesses, userLocation } = useBusiness();
+    const { filteredBusinesses, userLocation } = useBusiness();
     const navigate = useNavigate();
     const [isMounted, setIsMounted] = useState(false);
 
@@ -85,7 +85,7 @@ export const MapPreview: React.FC = () => {
                     </>
                 )}
 
-                {businesses.map(business => (
+                {filteredBusinesses.map(business => (
                     <Marker
                         key={business.business_id}
                         position={[business.latitude, business.longitude]}

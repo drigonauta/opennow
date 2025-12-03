@@ -20,6 +20,67 @@
     }
 }
 
+/* GPS Animations */
+@keyframes gpsPulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.18);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes gpsRadarRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes gpsNeonGlow {
+    0% {
+        box-shadow: 0 0 10px #00aaff, 0 0 20px #00aaff;
+    }
+
+    50% {
+        box-shadow: 0 0 18px #33ccff, 0 0 35px #33ccff;
+    }
+
+    100% {
+        box-shadow: 0 0 10px #00aaff, 0 0 20px #00aaff;
+    }
+}
+
+.gps-animate {
+    animation: gpsPulse 1.6s ease-in-out infinite;
+}
+
+.gps-neon {
+    animation: gpsNeonGlow 2s ease-in-out infinite;
+}
+
+.radar-ring {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border: 2px solid rgba(0, 170, 255, 0.45);
+    border-radius: 50%;
+    animation: gpsRadarRotate 3s linear infinite;
+    pointer-events: none;
+    /* Ensure it doesn't block clicks */
+}
+
 /* Move reCAPTCHA badge to the left */
 .grecaptcha-badge {
     width: 70px !important;
@@ -31,4 +92,47 @@
 
 .grecaptcha-badge:hover {
     width: 256px !important;
+}
+
+/* User Online Badge Animation */
+@keyframes onlinePulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.online-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4ade80;
+    /* Green-400 */
+    animation: onlinePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
 }

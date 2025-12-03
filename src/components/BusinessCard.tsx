@@ -4,7 +4,9 @@ import type { Business } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
 import { StatusBadge } from './StatusBadge';
 import { MapPin, Phone, Clock, Heart, Star, ShieldCheck } from 'lucide-react';
-import { formatWhatsAppLink } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
+import { useLocation } from '../context/LocationContext';
+import { createWhatsAppMessageLink } from '../lib/utils';
 import { ClaimBusinessModal } from './ClaimBusinessModal';
 import { useState } from 'react';
 
@@ -16,11 +18,19 @@ interface BusinessCardProps {
 
 export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: propIsOpen, distance }) => {
     const { isFavorite, toggleFavorite } = useFavorites();
+    const { user } = useAuth();
+    const { currentCity } = useLocation();
     const [showClaimModal, setShowClaimModal] = useState(false);
     // Determine status for styling
     const isOpen = propIsOpen ?? false;
 
-    const whatsappLink = formatWhatsAppLink(business.whatsapp);
+    const whatsappLink = createWhatsAppMessageLink(
+        business.whatsapp,
+        business.name,
+        business.business_id,
+        user?.displayName,
+        currentCity
+    );
 
     return (
         <Link to={`/business/${business.business_id}`} className={`
@@ -44,7 +54,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                 </div>
                 <div className="flex items-center text-gray-600 text-sm">
                     <MapPin className="w-4 h-4 mr-2" />
-                    <span className="truncate">Uberaba, MG {distance && `• ${distance}`}</span>
+                    <span className="truncate">{business.city || 'Uberaba'}, {business.state || 'MG'} {distance && `• ${distance}`}</span>
                 </div>
             </div>
 

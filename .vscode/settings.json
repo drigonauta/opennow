@@ -1,0 +1,4 @@
+{
+    "files.readonlyFromPermissions": true,
+    "java.import.maven.disableTestClasspathFlag": true
+}

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useBusiness } from '../context/BusinessContext';
+import { useAuth } from '../context/AuthContext';
+import { useLocation } from '../context/LocationContext';
 import { Navigation, Clock, MapPin, ArrowRight } from 'lucide-react';
+import { createWhatsAppMessageLink } from '../lib/utils';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -59,6 +62,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 export const MapPage: React.FC = () => {
     const { businesses, userLocation } = useBusiness();
+    const { user } = useAuth();
+    const { currentCity } = useLocation();
     const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
     // Calculate ETA based on distance (assuming 30km/h avg city speed)
     const eta = React.useMemo(() => {
@@ -144,7 +149,13 @@ export const MapPage: React.FC = () => {
                             <Navigation size={16} /> IR AGORA
                         </button>
                         <a
-                            href={`https://wa.me/${selectedBusiness.whatsapp}?text=Olá! Vim direto pelo aplicativo OpeNow.`}
+                            href={createWhatsAppMessageLink(
+                                selectedBusiness.whatsapp,
+                                selectedBusiness.name,
+                                selectedBusiness.business_id,
+                                user?.displayName,
+                                currentCity
+                            ) || '#'}
                             target="_blank"
                             rel="noreferrer"
                             className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors"

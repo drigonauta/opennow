@@ -8,12 +8,13 @@ import { CategoryFilter } from '../components/CategoryFilter';
 import { SearchBar } from '../components/SearchBar';
 import { MapPreview } from '../components/MapPreview';
 import { CitySearch } from '../components/CitySearch';
-import type { Category } from '../types';
+import { UserStatusBadge } from '../components/UserStatusBadge';
+import { CityStatsBadge } from '../components/CityStatsBadge';
+
 
 export const Home: React.FC = () => {
-    const { businesses, loading, error, lastUpdated, sortBy, setSortBy, refreshBusinesses } = useBusiness();
-    const { currentCity, currentState, userLocation } = useLocation();
-    const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
+    const { businesses, filteredBusinesses, error, lastUpdated, sortBy, setSortBy, refreshBusinesses, selectedCategory, setSelectedCategory } = useBusiness();
+    const { currentCity, userLocation } = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOpenOnly, setIsOpenOnly] = useState(false);
 
@@ -61,86 +62,57 @@ export const Home: React.FC = () => {
         }
     }, [currentCity, businesses, userLocation, refreshBusinesses]);
 
-    // Fuse.js Search
+    // Fuse.js Search (Client-side search on top of filtered list)
     const fuse = React.useMemo(() => {
-        if (!businesses.length) return null;
-        return new Fuse(businesses, {
+        if (!filteredBusinesses.length) return null;
+        return new Fuse(filteredBusinesses, {
             keys: ['name', 'description', 'category'],
             threshold: 0.3,
             distance: 100,
         });
-    }, [businesses]);
+    }, [filteredBusinesses]);
 
-    const filteredBusinesses = React.useMemo(() => {
-        let result = businesses;
-
-        // 1. Search
+    // Final display list (Search on top of Context Filter)
+    const displayBusinesses = React.useMemo(() => {
         if (searchQuery && fuse) {
-            result = fuse.search(searchQuery).map((r: any) => r.item);
+            return fuse.search(searchQuery).map((r: any) => r.item);
         }
-
-        // 2. Category Filter
-        if (selectedCategory !== 'All') {
-            result = result.filter(b => {
-                if (!b.category) return false;
-                // 1. Exact Match (for default categories like 'Alimentação')
-                if (b.category === selectedCategory) return true;
-
-                // 2. Normalized Match (for custom categories where ID is slugified)
-                // e.g. Business="DIARISTA" -> slug="diarista" === selected="diarista"
-                const normCategory = b.category.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-                return normCategory === selectedCategory;
-            });
-        }
-
-        // 3. Open Only Filter
-        if (isOpenOnly) {
-            result = result.filter(isBusinessOpen);
-        }
-
-        // 4. Location Filter
-        if (currentCity && currentState) {
-            const normCity = normalizeString(currentCity);
-            const normState = normalizeString(currentState);
-            const isDefaultLoc = normCity === 'uberaba' && normState === 'mg';
-
-            result = result.filter(b => {
-                // If business has no location set (legacy), show it for Uberaba/MG default
-                if (!b.city || !b.state) {
-                    return isDefaultLoc;
-                }
-
-                const bCity = normalizeString(b.city);
-                const bState = normalizeString(b.state);
-
-                // Handle "Todas" (All) logic
-                const cityMatch = normCity === 'todas' || bCity === normCity;
-                const stateMatch = normState === 'todas' || bState === normState;
-
-                return cityMatch && stateMatch;
-            });
-        }
-
-        return result;
-    }, [businesses, searchQuery, selectedCategory, isOpenOnly, fuse, currentCity, currentState]);
+        return filteredBusinesses;
+    }, [filteredBusinesses, searchQuery, fuse]);
 
     // Businesses are already sorted by distance in Context if userLocation is available
-    const businessesWithDistance = filteredBusinesses;
+    const businessesWithDistance = displayBusinesses;
 
 
-    if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    // if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
     if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Top Logo Header */}
             <div className="bg-gray-900 py-3 px-4 border-b border-gray-800">
-                <div className="max-w-7xl mx-auto flex justify-center md:justify-start">
-                    <img
-                        src="/logo-neon-final.png"
-                        alt="OpenNow Logo"
-                        className="h-16 md:h-20 object-contain"
-                    />
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="flex justify-between items-center w-full md:w-auto">
+                        <img
+                            src="/logo-neon-final.png"
+                            alt="OpenNow Logo"
+                            className="h-12 md:h-16 object-contain"
+                        />
+                        {/* Mobile User Badge (optional, but keeping layout simple for now, user badge is usually top right) */}
+                        <div className="md:hidden">
+                            <UserStatusBadge />
+                        </div>
+                    </div>
+
+                    {/* Stats Badge - Centered on Desktop, Below Logo on Mobile */}
+                    <div className="order-last md:order-none w-full md:w-auto flex justify-center">
+                        <CityStatsBadge />
+                    </div>
+
+                    {/* Desktop User Badge */}
+                    <div className="hidden md:block">
+                        <UserStatusBadge />
+                    </div>
                 </div>
             </div>
 
@@ -193,7 +165,7 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Location Selector */}
-            <div className="bg-blue-800 text-white py-2 px-4 flex justify-center items-center gap-2">
+            <div className="bg-blue-800 text-white py-4 px-4 flex flex-col justify-center items-center gap-4">
                 <CitySearch />
             </div>
 

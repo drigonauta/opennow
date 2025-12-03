@@ -233,9 +233,27 @@ app.post('/api/business/toggle-status', authenticateToken, async (req, res) => {
 });
 
 // 4. List All Businesses (Public)
+// 4. List All Businesses (Public)
+// 4. List All Businesses (Public)
 app.get('/api/business/list', async (req, res) => {
     try {
-        const snapshot = await db.collection('business').get();
+        const { city, state, category } = req.query;
+        let query = db.collection('business');
+
+        // 1. City & State Filter (Strict)
+        if (city && city !== 'Todas') {
+            query = query.where('city', '==', city);
+            if (state && state !== 'Todas') {
+                query = query.where('state', '==', state);
+            }
+        }
+
+        // 2. Category Filter (Strict)
+        if (category && category !== 'All' && category !== 'Todas') {
+            query = query.where('category', '==', category);
+        }
+
+        const snapshot = await query.get();
         const businesses = snapshot.docs.map(doc => doc.data());
         res.json(businesses);
     } catch (error) {
@@ -265,12 +283,19 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
         // Mock Payment Processing
         const isSuccess = Math.random() > 0.1; // 90% success rate
         if (!isSuccess) {
-            return res.status(400).json({ error: 'Payment declined by bank' });
+            return res.status(400).json({ error: 'Pagamento recusado pelo banco.' });
         }
 
-        const amount = plan === 'premium' ? 99.90 : 0;
+        const planPrices = {
+            'free': { monthly: 0, yearly: 0 },
+            'gold': { monthly: 120, yearly: 899 },
+            'diamond': { monthly: 249, yearly: 1790 }
+        };
+
+        const billing_cycle = req.body.billing_cycle || 'monthly';
+        const amount = planPrices[plan][billing_cycle];
         const now = Date.now();
-        const renewDate = now + 30 * 24 * 60 * 60 * 1000; // +30 days
+        const renewDate = now + (billing_cycle === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000;
 
         // Create Transaction
         const transactionId = `tx_${now}`;
@@ -281,7 +306,9 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
             status: 'paid',
             date: now,
             method: 'credit_card',
-            card_last4: card_details.number.slice(-4)
+            card_last4: card_details.number.slice(-4),
+            plan,
+            billing_cycle
         };
         await db.collection('transactions').doc(transactionId).set(transaction);
 
@@ -302,22 +329,132 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
             status: 'active',
             start_date: now,
             renew_date: renewDate,
-            amount
+            amount,
+            billing_cycle
         };
         await db.collection('subscriptions').doc(subscriptionId).set(subscription);
 
+        // Define features based on plan
+        const features = {
+            basicProfile: true,
+            hours: true,
+            address: true,
+            whatsapp: true,
+            highlight: plan !== 'free',
+            photosLimit: plan === 'free' ? 1 : (plan === 'gold' ? 15 : 50),
+            metrics: plan === 'free' ? 'none' : (plan === 'gold' ? 'basic' : 'advanced'),
+            verifiedBadge: plan !== 'free',
+            shortLink: plan !== 'free',
+            prioritySupport: plan !== 'free',
+            top3: plan === 'diamond',
+            animatedCover: plan === 'diamond',
+            video: plan === 'diamond',
+            customPage: plan === 'diamond',
+            aiChat: plan === 'diamond',
+            marketingDiscount: plan === 'diamond'
+        };
+
         // Update Business Status
         await businessRef.update({
-            is_premium: (plan === 'premium'),
-            subscription_status: 'active'
+            is_premium: plan !== 'free',
+            plan: plan,
+            subscription_status: 'active',
+            features: features,
+            owner_id: owner_id // Ensure owner is set
         });
 
-        const updatedBusiness = { ...doc.data(), is_premium: (plan === 'premium'), subscription_status: 'active' };
+        const updatedBusiness = {
+            ...doc.data(),
+            is_premium: plan !== 'free',
+            plan: plan,
+            subscription_status: 'active',
+            features: features,
+            owner_id: owner_id
+        };
         broadcast({ type: 'BUSINESS_UPDATED', payload: updatedBusiness });
 
         res.json({ success: true, subscription, transaction });
     } catch (error) {
         console.error('Error processing subscription:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 1.5 Create Claim Request
+app.post('/api/claims/create', authenticateToken, async (req, res) => {
+    const { businessId, userName, userEmail, userPhone, planSelected, billingCycle } = req.body;
+    const userId = req.user.id;
+
+    try {
+        const claimId = `claim_${Date.now()}`;
+        const claim = {
+            claimId,
+            userId,
+            businessId,
+            userName,
+            userEmail,
+            userPhone,
+            planSelected,
+            billingCycle,
+            status: 'pending', // In a real app, this would need admin approval or phone verification
+            timestamp: Date.now()
+        };
+
+        await db.collection('businessClaims').doc(claimId).set(claim);
+
+        // For this demo, we auto-approve and update the business owner immediately if it's the free plan
+        // or if we want to simulate instant access. 
+        // But usually, we wait for payment.
+        // The frontend will handle the payment flow next.
+
+        res.json({ success: true, claim });
+    } catch (error) {
+        console.error('Error creating claim:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 5. Marketing: Create Ad/Boost
+app.post('/api/marketing/create', authenticateToken, async (req, res) => {
+    const { businessId, type, durationDays } = req.body; // type: 'boost' | 'ad'
+    const userId = req.user.id;
+
+    try {
+        const businessRef = db.collection('business').doc(businessId);
+        const doc = await businessRef.get();
+        if (!doc.exists) return res.status(404).json({ error: 'Business not found' });
+
+        const business = doc.data();
+        if (business.owner_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
+
+        const basePrice = type === 'boost' ? 49.00 : 99.00;
+        let finalPrice = basePrice;
+
+        // Apply Diamond Discount
+        if (business.plan === 'diamond') {
+            finalPrice = basePrice * 0.7; // 30% off
+        }
+
+        // Mock Payment for Marketing
+        // In real app, process payment here
+
+        const adId = `ad_${Date.now()}`;
+        await db.collection('marketing').doc(adId).set({
+            adId,
+            businessId,
+            type,
+            durationDays,
+            price: finalPrice,
+            discountApplied: business.plan === 'diamond',
+            status: 'active',
+            startDate: Date.now(),
+            endDate: Date.now() + (durationDays * 24 * 60 * 60 * 1000)
+        });
+
+        res.json({ success: true, message: 'Campanha criada com sucesso!', discountApplied: business.plan === 'diamond' });
+
+    } catch (error) {
+        console.error('Error creating marketing campaign:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
