@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
+// --- Interfaces ---
+
 interface Business {
     business_id: string;
     name: string;
@@ -71,17 +73,20 @@ interface AdminContextType {
     isSyncing: boolean;
 }
 
-const AdminContext = createContext<AdminContextType | undefined>(undefined);
+// --- 1. Context Definition (Exported First) ---
+export const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+// --- 2. Provider Component ---
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // 2.1 State Definitions
     const [stats, setStats] = useState<Stats | null>(null);
-    console.log('AdminContext loaded v2 - Fix Applied');
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    // 2.2 Function Definitions (Defined before use)
     const handleSync = async () => {
         setIsSyncing(true);
         try {
@@ -105,7 +110,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const fetchData = async () => {
         setLoading(true);
         try {
-            const token = 'admin-secret-token'; // Hardcoded for MVP as per original file
+            const token = 'admin-secret-token';
 
             const [statsRes, businessRes, leadsRes, categoriesRes] = await Promise.all([
                 fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
@@ -134,11 +139,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     };
 
+    // 2.3 Effects
     useEffect(() => {
         fetchData();
     }, []);
 
-    const { openCount, closedCount, premiumCount } = useMemo((): { openCount: number; closedCount: number; premiumCount: number } => {
+    // 2.4 Memoized Calculations (Strict local variables)
+    const counts = useMemo(() => {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -178,31 +185,41 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
         });
 
-        return { openCount: open, closedCount: closed, premiumCount: premium };
+        // Explicit return object
+        return {
+            openCount: open,
+            closedCount: closed,
+            premiumCount: premium
+        };
     }, [businesses]);
 
+    // 2.5 Explicit Context Value Construction
+    const contextValue: AdminContextType = {
+        stats,
+        businesses,
+        leads,
+        categories,
+        loading,
+        refreshData: fetchData,
+        setBusinesses,
+        setLeads,
+        setCategories,
+        openCount: counts.openCount,
+        closedCount: counts.closedCount,
+        premiumCount: counts.premiumCount,
+        handleSync,
+        isSyncing
+    };
+
+    // 2.6 Return Provider
     return (
-        <AdminContext.Provider value={{
-            stats,
-            businesses,
-            leads,
-            categories,
-            loading,
-            refreshData: fetchData,
-            setBusinesses,
-            setLeads,
-            setCategories,
-            openCount,
-            closedCount,
-            premiumCount,
-            handleSync,
-            isSyncing
-        }}>
+        <AdminContext.Provider value={contextValue}>
             {children}
         </AdminContext.Provider>
     );
 };
 
+// --- 3. Hook Definition ---
 export const useAdmin = () => {
     const context = useContext(AdminContext);
     if (context === undefined) {
