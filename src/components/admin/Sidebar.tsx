@@ -19,7 +19,7 @@ export const Sidebar: React.FC = () => {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                     <span className="font-bold text-white text-lg">O</span>
                 </div>
-                <span className="font-bold text-xl text-white tracking-tight">OpenNow</span>
+                <span className="font-bold text-xl text-white tracking-tight">TáAberto</span>
             </div>
 
             <div className="px-4 mb-6">

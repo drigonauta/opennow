@@ -9,6 +9,8 @@ import { useLocation } from '../context/LocationContext';
 import { createWhatsAppMessageLink } from '../lib/utils';
 import { ClaimBusinessModal } from './ClaimBusinessModal';
 import { useState } from 'react';
+import { BadgeCheck } from 'lucide-react'; // For verified seal
+import { AnalyticsService } from '../services/AnalyticsService';
 
 interface BusinessCardProps {
     business: Business;
@@ -34,25 +36,33 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
 
     return (
         <Link to={`/business/${business.business_id}`} className={`
-            block bg-white rounded-xl shadow-sm border p-4 mb-3 transition-all duration-500 hover:shadow-md
-            ${isOpen ? 'border-green-200 hover:border-green-300' : 'border-gray-100 hover:border-gray-200'}
+            block bg-ta-card rounded-xl shadow-lg border p-4 mb-3 transition-all duration-500 hover:shadow-neon-blue hover:border-ta-blue/30
+            ${isOpen ? 'border-ta-green/30' : 'border-gray-800'}
         `}>
             <div className="flex justify-between items-start mb-2">
                 <div>
-                    <h3 className="font-bold text-lg text-gray-900">{business.name}</h3>
-                    <p className="text-sm text-gray-500">{business.category}</p>
+                    <h3 className="font-bold text-lg text-white flex items-center gap-1">
+                        {business.name}
+                        {business.is_verified && (
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-ta-blue blur-sm opacity-50 rounded-full"></div>
+                                <BadgeCheck size={18} className="text-ta-blue relative z-10" fill="#0E1621" />
+                            </div>
+                        )}
+                    </h3>
+                    <p className="text-sm text-gray-400">{business.category}</p>
                 </div>
                 <StatusBadge isOpen={propIsOpen ?? false} />
             </div>
 
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">{business.description}</p>
+            <p className="text-gray-400 text-sm mb-3 line-clamp-2">{business.description}</p>
 
-            <div className="space-y-1.5 text-sm text-gray-500">
-                <div className="flex items-center text-gray-600 text-sm">
+            <div className="space-y-1.5 text-sm text-gray-400">
+                <div className="flex items-center text-gray-400 text-sm">
                     <Clock className="w-4 h-4 mr-2" />
                     <span>{business.open_time} - {business.close_time}</span>
                 </div>
-                <div className="flex items-center text-gray-600 text-sm">
+                <div className="flex items-center text-gray-400 text-sm">
                     <MapPin className="w-4 h-4 mr-2" />
                     <span className="truncate">{business.city || 'Uberaba'}, {business.state || 'MG'} {distance && `• ${distance}`}</span>
                 </div>
@@ -64,15 +74,18 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         href={whatsappLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-green-500 text-white py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 hover:bg-green-600 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 bg-ta-green text-black py-3 rounded-lg font-extrabold text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,255,136,0.4)] hover:shadow-[0_0_25px_rgba(0,255,136,0.7)] hover:scale-105 transition-all duration-300 border border-ta-green"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            AnalyticsService.logEvent('whatsapp', business.business_id, user?.uid);
+                        }}
                     >
                         <Phone size={16} />
                         WhatsApp
                     </a>
                 ) : (
                     <button
-                        className="flex-1 bg-gray-100 text-gray-400 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 cursor-not-allowed"
+                        className="flex-1 bg-gray-800 text-gray-600 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 cursor-not-allowed"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -90,19 +103,36 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         toggleFavorite(business.business_id);
                     }}
                     className={`p-2 rounded-lg border transition-colors ${isFavorite(business.business_id)
-                        ? 'bg-red-50 border-red-200 text-red-500'
-                        : 'bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200'
+                        ? 'bg-red-500/10 border-red-500 text-red-500'
+                        : 'bg-transparent border-gray-700 text-gray-500 hover:text-red-500 hover:border-red-500'
                         }`}
                 >
                     <Heart size={20} fill={isFavorite(business.business_id) ? "currentColor" : "none"} />
+                </button>
+
+                {/* Call Button */}
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (business.phone || business.whatsapp) {
+                            AnalyticsService.logEvent('call', business.business_id, user?.uid);
+                            window.location.href = `tel:${business.phone || business.whatsapp}`;
+                        }
+                    }}
+                    className="flex-1 bg-transparent border-2 border-ta-blue text-ta-blue py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,180,255,0.2)] hover:bg-ta-blue hover:text-black hover:shadow-[0_0_20px_rgba(0,180,255,0.6)] hover:scale-105 transition-all duration-300"
+                    title="Ligar Agora"
+                >
+                    <Phone size={16} />
+                    Ligar
                 </button>
             </div>
 
             {/* Google Rating */}
             {(business.rating !== undefined && business.rating !== null) && (
-                <div className="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center">
+                <div className="mt-3 pt-3 border-t border-gray-800 flex justify-between items-center">
                     <div
-                        className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
+                        className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 -mx-2 px-2 py-1 rounded transition-colors"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -115,11 +145,11 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         }}
                         title="Ver avaliações no Google Maps"
                     >
-                        <div className="flex text-yellow-400">
+                        <div className="flex text-yellow-500">
                             <Star size={14} fill="currentColor" />
                         </div>
-                        <span className="text-sm font-bold text-gray-700">{business.rating}</span>
-                        <span className="text-xs text-gray-400">({business.review_count || business.user_ratings_total || 0})</span>
+                        <span className="text-sm font-bold text-white">{business.rating}</span>
+                        <span className="text-xs text-gray-500">({business.review_count || business.user_ratings_total || 0})</span>
                     </div>
 
                     {/* Claim Button */}
@@ -130,7 +160,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                                 e.stopPropagation();
                                 setShowClaimModal(true);
                             }}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                            className="text-xs font-medium text-ta-blue hover:text-white hover:bg-ta-blue/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
                         >
                             <ShieldCheck size={12} />
                             Reivindicar

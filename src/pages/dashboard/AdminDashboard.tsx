@@ -91,7 +91,7 @@ export const AdminDashboard: React.FC = () => {
 
     // Mock Admin Check (In real app, check role)
     useEffect(() => {
-        // if (!user || user.email !== 'admin@opennow.com') {
+        // if (!user || user.email !== 'admin@taaberto.com.br') {
         //   navigate('/login');
         // }
         fetchData();

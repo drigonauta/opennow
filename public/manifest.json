@@ -1,0 +1,20 @@
+{
+    "name": "TáAberto",
+    "short_name": "TáAberto",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#050B11",
+    "theme_color": "#050B11",
+    "icons": [
+        {
+            "src": "/logo-taaberto.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/logo-taaberto.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

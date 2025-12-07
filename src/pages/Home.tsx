@@ -8,8 +8,8 @@ import { CategoryFilter } from '../components/CategoryFilter';
 import { SearchBar } from '../components/SearchBar';
 import { MapPreview } from '../components/MapPreview';
 import { CitySearch } from '../components/CitySearch';
-import { UserStatusBadge } from '../components/UserStatusBadge';
 import { CityStatsBadge } from '../components/CityStatsBadge';
+import { UserStatusBadge } from '../components/UserStatusBadge';
 
 
 export const Home: React.FC = () => {
@@ -88,14 +88,15 @@ export const Home: React.FC = () => {
     if (error) return <div className="text-red-500 text-center p-4">{error}</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="min-h-screen bg-ta-bg pb-20">
             {/* Top Logo Header */}
-            <div className="bg-gray-900 py-3 px-4 border-b border-gray-800">
+            {/* Top Logo Header - Pure Black to match logo */}
+            <div className="bg-black py-4 px-4 border-b border-gray-900 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex justify-between items-center w-full md:w-auto">
                         <img
-                            src="/logo-neon-final.png"
-                            alt="OpenNow Logo"
+                            src="/logo-taaberto.png"
+                            alt="TáAberto Logo"
                             className="h-12 md:h-16 object-contain"
                         />
                         {/* Mobile User Badge (optional, but keeping layout simple for now, user badge is usually top right) */}
@@ -117,7 +118,7 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Hero Banner */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 px-4 sm:px-6 lg:px-8">
+            <div className="bg-gradient-to-r from-ta-card to-gray-900 border-b border-gray-800 text-white py-8 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
 
                     {/* Left Side: Advertising Space */}
@@ -133,21 +134,21 @@ export const Home: React.FC = () => {
                     {/* Right Side: User Focus CTA */}
                     <div className="text-center md:text-left space-y-6">
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-4">
+                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-4 text-white">
                                 Descubra quem está <br className="hidden md:block" />
-                                <span className="text-yellow-400">ABERTO AGORA</span> na sua cidade.
+                                <span className="text-ta-green drop-shadow-[0_0_15px_rgba(0,255,136,0.6)]">ABERTO AGORA</span> <span className="text-ta-green">na sua cidade.</span>
                             </h1>
-                            <p className="text-lg text-blue-100 max-w-lg mx-auto md:mx-0">
-                                Encontre restaurantes, serviços e lojas abertos neste exato momento. Sem perda de tempo.
+                            <p className="text-lg text-gray-300 max-w-lg mx-auto md:mx-0">
+                                Encontre restaurantes, serviços e lojas abertos neste exato momento.
                             </p>
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center md:justify-start gap-4">
                             <Link
                                 to="/login"
-                                className="w-full sm:w-auto bg-white text-blue-600 px-8 py-4 rounded-full font-bold text-lg shadow-xl hover:bg-blue-50 hover:scale-105 transition-all transform flex items-center justify-center gap-2"
+                                className="w-full sm:w-auto bg-ta-blue text-ta-bg px-8 py-4 rounded-full font-bold text-lg shadow-[0_0_15px_rgba(0,180,255,0.4)] hover:bg-white hover:scale-105 transition-all transform flex items-center justify-center gap-2"
                             >
-                                <span>Ver empresas abertas agora</span>
+                                <span className="font-bold">Ver empresas abertas agora</span>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                 </svg>
@@ -165,14 +166,14 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Location Selector */}
-            <div className="bg-blue-800 text-white py-4 px-4 flex flex-col justify-center items-center gap-4">
+            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4">
                 <CitySearch />
             </div>
 
 
 
             {/* Header / Search */}
-            <div className="bg-white shadow-sm sticky top-0 z-10">
+            <div className="bg-ta-bg shadow-sm sticky top-0 z-10 border-b border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col space-y-4">
                         <div className="flex justify-between items-center">
@@ -191,8 +192,8 @@ export const Home: React.FC = () => {
                                 <button
                                     onClick={() => setIsOpenOnly(!isOpenOnly)}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${isOpenOnly
-                                        ? 'bg-green-100 text-green-800 border-green-200 border'
-                                        : 'bg-gray-100 text-gray-600 border-gray-200 border hover:bg-gray-200'
+                                        ? 'bg-ta-green/20 text-ta-green border-ta-green border shadow-neon-green'
+                                        : 'bg-ta-card text-gray-400 border-gray-700 border hover:border-gray-500'
                                         }`}
                                 >
                                     {isOpenOnly ? '🟢 Abertos Agora' : '⚪ Mostrar todos'}
@@ -201,7 +202,7 @@ export const Home: React.FC = () => {
                                 <select
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value as 'distance' | 'rating')}
-                                    className="px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="px-3 py-1 rounded-full text-xs font-medium bg-ta-card border border-gray-700 text-ta-text focus:outline-none focus:ring-2 focus:ring-ta-blue"
                                 >
                                     <option value="distance">📍 Mais Próximos</option>
                                     <option value="rating">⭐ Melhor Avaliados</option>

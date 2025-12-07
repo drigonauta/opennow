@@ -18,7 +18,7 @@ export const StepPlans: React.FC<StepPlansProps> = ({ onSelect }) => {
             color: 'bg-gray-100 text-gray-600',
             border: 'border-gray-200',
             features: [
-                'Perfil básico no OpenNow',
+                'Perfil básico no TáAberto',
                 'Horários de funcionamento',
                 'Endereço e Mapa',
                 'WhatsApp clicável',
@@ -62,7 +62,7 @@ export const StepPlans: React.FC<StepPlansProps> = ({ onSelect }) => {
                 'Vídeo de apresentação',
                 'Painel avançado de insights',
                 'Página personalizada (Mini Site)',
-                'Chat OpenNow AI 24h',
+                'Chat TáAberto AI 24h',
                 'Badge VIP Diamante',
                 '30% OFF no Painel de Marketing'
             ],
@@ -74,7 +74,7 @@ export const StepPlans: React.FC<StepPlansProps> = ({ onSelect }) => {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900">Escolha o Plano Ideal</h2>
-                <p className="text-gray-500 mt-2">Potencialize sua empresa no OpenNow</p>
+                <p className="text-gray-500 mt-2">Potencialize sua empresa no TáAberto</p>
 
                 <div className="flex justify-center mt-6">
                     <div className="bg-gray-100 p-1 rounded-xl flex">

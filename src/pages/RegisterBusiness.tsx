@@ -141,7 +141,7 @@ export const RegisterBusiness: React.FC = () => {
             <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-10">
                     <h2 className="text-3xl font-extrabold text-gray-900">Cadastre seu Negócio</h2>
-                    <p className="mt-2 text-gray-600">Junte-se ao OpenNow e seja encontrado por milhares de clientes.</p>
+                    <p className="mt-2 text-gray-600">Junte-se ao TáAberto e seja encontrado por milhares de clientes.</p>
                 </div>
 
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@layer base {
+    body {
+        background-color: #050B11;
+        color: #EAF6FF;
+        @apply antialiased;
+    }
+}
+
 @keyframes bounce {
 
     0%,

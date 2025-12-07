@@ -38,22 +38,22 @@ export function createWhatsAppMessageLink(
     const formattedPhone = formatWhatsAppLink(phone);
     if (!formattedPhone) return null;
 
-    const name = userName || "um cliente do OpenNow";
+    const name = userName || "um cliente do TáAberto";
     const city = cityName || "minha cidade";
 
     const message = `
 Olá! Meu nome é ${name} 😊
-Encontrei a empresa **${businessName}** aqui no OpenNow e gostaria de mais informações.
+Encontrei a empresa **${businessName}** aqui no TáAberto e gostaria de mais informações.
 
 📍 Estou em ${city}
-🌐 Página oficial da empresa no OpenNow:
+🌐 Página oficial da empresa no TáAberto:
 https://openow.io/empresa/${businessId}
 
 Se você for o proprietário dessa empresa, pode reivindicar sua página gratuitamente e atualizá-la sempre que quiser:
 
 🔑 https://openow.io/reivindicar/${businessId}
 
-Mensagem automática enviada pelo OpenNow —
+Mensagem automática enviada pelo TáAberto —
 descubra quem está aberto agora na sua cidade.`.trim();
 
     const encodedMessage = encodeURIComponent(message);

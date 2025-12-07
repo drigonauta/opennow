@@ -199,12 +199,12 @@ export const AdminImport: React.FC = () => {
                 </div>
 
                 {/* Search Form */}
-                <div className="bg-white p-6 shadow sm:rounded-lg mb-8">
+                <div className="bg-white p-6 shadow sm:rounded-lg mb-8 relative z-10">
                     <form onSubmit={handleSearch} className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-                        <div className="sm:col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700">O que procura?</label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <div className="sm:col-span-2 lg:col-span-1 relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">O que procura?</label>
+                            <div className="relative rounded-md shadow-sm">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                                     <Search className="h-4 w-4 text-gray-400" />
                                 </div>
                                 <input
@@ -212,39 +212,42 @@ export const AdminImport: React.FC = () => {
                                     required
                                     value={term}
                                     onChange={(e) => setTerm(e.target.value)}
-                                    className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 sm:text-sm border-gray-300 rounded-md py-2 border"
+                                    className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 sm:text-sm border-gray-300 rounded-md py-2 border relative z-20 bg-white text-gray-900"
                                     placeholder="Ex: Padaria, Oficina"
+                                    autoComplete="off"
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Cidade</label>
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
                             <input
                                 type="text"
                                 required
                                 value={city}
                                 onChange={(e) => setCity(e.target.value)}
-                                className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 border px-3"
+                                className="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 border px-3 relative z-20 bg-white text-gray-900"
                                 placeholder="Ex: Uberaba"
+                                autoComplete="off"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Bairro (Opcional)</label>
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bairro (Opcional)</label>
                             <input
                                 type="text"
                                 value={neighborhood}
                                 onChange={(e) => setNeighborhood(e.target.value)}
-                                className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 border px-3"
+                                className="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 border px-3 relative z-20 bg-white text-gray-900"
                                 placeholder="Ex: Centro"
+                                autoComplete="off"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 items-center gap-2 h-[38px]"
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 items-center gap-2 h-[38px] relative z-20"
                         >
                             {loading ? 'Buscando...' : (
                                 <>

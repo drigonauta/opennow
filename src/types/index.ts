@@ -10,6 +10,8 @@ export interface Business {
     close_time: string;
     forced_status: 'open' | 'closed' | null;
     whatsapp: string;
+    phone?: string;
+    is_verified?: boolean;
     latitude: number;
     longitude: number;
     state?: string;
@@ -28,6 +30,8 @@ export interface Business {
     analytics?: {
         views: number;
         clicks: number;
+        whatsapp_clicks?: number;
+        call_clicks?: number;
         appearances: number;
     };
     created_at: number;

@@ -44,7 +44,7 @@ export default function AdminLogin() {
                         <Lock className="w-6 h-6 text-white" />
                     </div>
                     <h1 className="text-2xl font-bold text-white">Admin Access</h1>
-                    <p className="text-gray-400 text-sm mt-1">OpenNow Management System</p>
+                    <p className="text-gray-400 text-sm mt-1">TáAberto Management System</p>
                 </div>
 
                 {error && (

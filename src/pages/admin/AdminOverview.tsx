@@ -27,7 +27,7 @@ export const AdminOverview: React.FC = () => {
         <div className="space-y-8">
             <div>
                 <h1 className="text-2xl font-bold text-white mb-2">Visão Geral</h1>
-                <p className="text-gray-400">Bem-vindo ao painel de controle do OpenNow.</p>
+                <p className="text-gray-400">Bem-vindo ao painel de controle do TáAberto.</p>
             </div>
 
             {/* Stats Grid */}

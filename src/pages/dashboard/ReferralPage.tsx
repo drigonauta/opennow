@@ -8,7 +8,7 @@ interface ReferralHistoryItem {
 }
 
 export const ReferralPage: React.FC = () => {
-    const [referralLink] = useState('https://opennow.app/register?ref=12345');
+    const [referralLink] = useState('https://www.taaberto.com.br/register?ref=12345');
     const [stats] = useState({ count: 3, target: 10, reward: '1 Mês Premium' });
     const [history] = useState<ReferralHistoryItem[]>([
         { name: 'Padaria do Zé', status: 'approved', date: '20/11/2025' },
