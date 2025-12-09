@@ -5,6 +5,7 @@ import { StatCard } from '../../components/admin/StatCard';
 import { AIInsights } from '../../components/admin/AIInsights';
 import { Heatmap } from '../../components/admin/Heatmap';
 import { ActivityFeed } from '../../components/admin/ActivityFeed';
+import { AdsManager } from '../../components/admin/AdsManager';
 
 export const AdminOverview: React.FC = () => {
     const { stats, businesses, openCount, closedCount, premiumCount, loading } = useAdmin();
@@ -66,7 +67,15 @@ export const AdminOverview: React.FC = () => {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column (2/3) */}
+
+
+                // ... (existing code)
+
+                {/* Main Content Grid */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Ads Management Module */}
+                    <AdsManager />
+
                     <Heatmap />
 
                     {/* Ranking Section */}

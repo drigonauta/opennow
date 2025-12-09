@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Layout, Star, BarChart2, Shield, Trash2, Check, MapPin, User, Edit, Search, Download, Tag, RefreshCw } from 'lucide-react';
+import { Layout, Star, BarChart2, Shield, Trash2, Check, MapPin, User, Edit, Search, Download, Tag, RefreshCw, DollarSign } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -82,8 +82,9 @@ interface Category {
 export const AdminDashboard: React.FC = () => {
     // const { user } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'overview' | 'companies' | 'reviews' | 'approvals' | 'locations' | 'leads' | 'categories'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'companies' | 'reviews' | 'approvals' | 'locations' | 'leads' | 'categories' | 'financials'>('overview');
     const [stats, setStats] = useState<Stats | null>(null);
+    const [financialData, setFinancialData] = useState<any>(null);
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -104,14 +105,16 @@ export const AdminDashboard: React.FC = () => {
 
 
 
-            const [statsRes, businessRes, leadsRes, categoriesRes] = await Promise.all([
+            const [statsRes, businessRes, leadsRes, categoriesRes, financialsRes] = await Promise.all([
                 fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
                 fetch('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` } }),
                 fetch('/api/admin/leads', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('/api/categories')
+                fetch('/api/categories'),
+                fetch('/api/admin/financials', { headers: { Authorization: `Bearer ${token}` } })
             ]);
 
             if (statsRes.ok) setStats(await statsRes.json());
+            if (financialsRes.ok) setFinancialData(await financialsRes.json());
 
             if (businessRes.ok) {
                 const data = await businessRes.json();
@@ -365,9 +368,23 @@ export const AdminDashboard: React.FC = () => {
 
     const handleSaveLead = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Mock save
-        setIsLeadModalOpen(false);
-        alert('Lead salvo (mock)!');
+        try {
+            const res = await fetch('/api/admin/lead/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer admin-secret-token` },
+                body: JSON.stringify(editingLead)
+            });
+
+            if (res.ok) {
+                setIsLeadModalOpen(false);
+                fetchData(); // Refresh list
+            } else {
+                alert('Erro ao salvar lead.');
+            }
+        } catch (error) {
+            console.error('Save Lead Error:', error);
+            alert('Erro de conexão ao salvar lead.');
+        }
     };
 
     const handleDeleteLead = async (uid: string) => {
@@ -541,6 +558,7 @@ export const AdminDashboard: React.FC = () => {
                 <TabButton active={activeTab === 'locations'} onClick={() => setActiveTab('locations')} label="Locais" icon={<MapPin size={18} />} />
                 <TabButton active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} label="Leads" icon={<User size={18} />} />
                 <TabButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} label="Categorias" icon={<Tag size={18} />} />
+                <TabButton active={activeTab === 'financials'} onClick={() => setActiveTab('financials')} label="Financeiro" icon={<DollarSign size={18} />} />
             </div>
 
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 min-h-[500px]">
@@ -585,6 +603,88 @@ export const AdminDashboard: React.FC = () => {
                                     <li>• Avaliação recebida em: Farmácia Central</li>
                                     <li>• Lead capturado: Categoria Mecânico</li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'financials' && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <StatCard
+                                icon={<DollarSign />}
+                                label="Faturamento Total"
+                                value={`R$ ${financialData?.summary?.totalRevenue || '0.00'}`}
+                                color="green"
+                            />
+                            <StatCard
+                                icon={<RefreshCw />}
+                                label="MRR (Recorrente)"
+                                value={`R$ ${financialData?.summary?.mrr || '0.00'}/mês`}
+                                color="blue"
+                            />
+                            <StatCard
+                                icon={<Star />}
+                                label="Impulsionamentos"
+                                value={`${financialData?.summary?.activeBoosts || 0} Ativos`}
+                                color="yellow"
+                            />
+                            <StatCard
+                                icon={<Layout />}
+                                label="Anúncios Visuais"
+                                value={`${financialData?.summary?.activeAds || 0} Ativos`}
+                                color="purple"
+                            />
+                        </div>
+
+                        <div className="bg-gray-900 rounded-lg overflow-hidden">
+                            <div className="p-4 border-b border-gray-800">
+                                <h3 className="font-semibold">Transações Recentes</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-800 text-gray-400">
+                                        <tr>
+                                            <th className="p-3">Data</th>
+                                            <th className="p-3">Empresa (ID)</th>
+                                            <th className="p-3">Tipo</th>
+                                            <th className="p-3">Valor</th>
+                                            <th className="p-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700">
+                                        {financialData?.recentTransactions?.map((tx: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-gray-750">
+                                                <td className="p-3 text-gray-400">
+                                                    {new Date(tx.date).toLocaleDateString()}
+                                                </td>
+                                                <td className="p-3 font-medium">
+                                                    {tx.businessId}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className={`px-2 py-1 rounded text-xs ${tx.type.includes('Impulsionamento') ? 'bg-yellow-900 text-yellow-200' : 'bg-purple-900 text-purple-200'}`}>
+                                                        {tx.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 text-green-400 font-bold">
+                                                    R$ {tx.amount?.toFixed(2)}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className="bg-green-900 text-green-200 px-2 py-1 rounded text-xs">
+                                                        {tx.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {!financialData?.recentTransactions?.length && (
+                                            <tr>
+                                                <td colSpan={5} className="p-6 text-center text-gray-500">
+                                                    Nenhuma transação registrada ainda.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

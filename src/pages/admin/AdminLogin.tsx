@@ -15,6 +15,8 @@ export default function AdminLogin() {
         setLoading(true);
 
         try {
+            // reCAPTCHA Removed per user request
+
             const res = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -29,8 +31,9 @@ export default function AdminLogin() {
             } else {
                 setError(data.error || 'Falha no login');
             }
-        } catch (err) {
-            setError('Erro de conexão. Tente novamente.');
+        } catch (err: any) {
+            console.error('Login Error:', err);
+            setError(`Erro de conexão: ${err.message || 'Desconhecido'}. Verifique se o servidor backend está rodando.`);
         } finally {
             setLoading(false);
         }
@@ -78,6 +81,8 @@ export default function AdminLogin() {
                             required
                         />
                     </div>
+
+                    {/* reCAPTCHA Removed */}
 
                     <button
                         type="submit"

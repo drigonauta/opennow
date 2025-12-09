@@ -26,7 +26,10 @@ export interface Business {
     review_count?: number;
     user_ratings_total?: number;
     is_premium?: boolean;
-    plan?: 'free' | 'gold' | 'diamond';
+    plan: 'free' | 'pro' | 'dominante';
+    subscription_expiry?: number;
+    highlight_expires_at?: number;
+    ad_credits?: number;
     analytics?: {
         views: number;
         clicks: number;
@@ -36,4 +39,18 @@ export interface Business {
     };
     created_at: number;
     updated_at: number;
+}
+
+export interface AdCampaign {
+    id: string;
+    imageUrl: string;
+    link: string; // Business ID or External URL
+    durationMinutes: number;
+    startTime: number;
+    status: 'active' | 'scheduled' | 'expired';
+    type: 'admin' | 'automated';
+    priority: number;
+    clientName?: string; // For admin tracking
+    businessId?: string; // If linked to internal business
+    neonColor?: string;
 }

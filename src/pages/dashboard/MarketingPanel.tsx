@@ -6,7 +6,7 @@ export const MarketingPanel: React.FC = () => {
     const { businesses } = useBusiness();
     // Assuming the first business is the managed one for now, or we'd select one
     const business = businesses[0]; // In real app, select from list
-    const isDiamond = business?.plan === 'diamond';
+    const isDiamond = business?.plan === 'dominante';
     const [loading, setLoading] = useState(false);
 
     const campaigns = [

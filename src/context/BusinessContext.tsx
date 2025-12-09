@@ -232,12 +232,37 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Note: Category and City filtering is now handled server-side in fetchBusinesses.
         // We trust 'businesses' to already contain the correct filtered list.
 
-        // Apply Sorting
-        if (sortBy === 'rating') {
-            filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        } else if (sortBy === 'distance' && userLocation) {
-            filtered.sort((a, b) => ((a as any)._distance || 0) - ((b as any)._distance || 0));
-        }
+        // Apply Weighted Sorting
+        // Weights: Active Ad (1000), Dominante (100), Pro (50), Free (0)
+        filtered.sort((a, b) => {
+            const getScore = (business: Business) => {
+                let score = 0;
+                const now = Date.now();
+                // 1. Pix Ad Priority
+                if (business.highlight_expires_at && business.highlight_expires_at > now) score += 1000;
+                // 2. Plan Priority
+                if (business.plan === 'dominante') score += 100;
+                else if (business.plan === 'pro') score += 50;
+
+                return score;
+            };
+
+            const scoreA = getScore(a);
+            const scoreB = getScore(b);
+
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA; // Primary: Higher score first
+            }
+
+            // Secondary Sorting
+            if (sortBy === 'rating') {
+                return (b.rating || 0) - (a.rating || 0);
+            } else if (sortBy === 'distance' && userLocation) {
+                return ((a as any)._distance || 0) - ((b as any)._distance || 0);
+            }
+
+            return 0;
+        });
 
         return filtered;
     };

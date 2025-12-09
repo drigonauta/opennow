@@ -11,7 +11,7 @@ export default {
                 'ta-card': '#0E1621',
                 'ta-text': '#EAF6FF',
                 'ta-blue': '#00B4FF',
-                'ta-green': '#00FF88',
+                'ta-green': '#39FF14',
                 'ta-gray': '#9CA3AF'
             },
             boxShadow: {

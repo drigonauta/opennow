@@ -11,10 +11,10 @@ export const CitySearch: React.FC = () => {
 
     // Sync input with context changes (e.g. GPS detection)
     useEffect(() => {
-        if (currentCity && currentState) {
-            setInputValue(`${currentCity}, ${currentState}`);
-        } else if (currentCity) {
-            setInputValue(currentCity);
+        const newVal = currentCity && currentState ? `${currentCity}, ${currentState}` : currentCity || '';
+        if (inputValue !== newVal) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setInputValue(newVal);
         }
     }, [currentCity, currentState]);
 
@@ -97,7 +97,7 @@ export const CitySearch: React.FC = () => {
             setShowSuggestions(false);
             // Parse input to separate City and State if possible
             const parts = inputValue.split(',').map(p => p.trim());
-            let newCity = parts[0];
+            const newCity = parts[0];
             let newState = currentState;
 
             if (parts.length > 1) {
@@ -132,7 +132,7 @@ export const CitySearch: React.FC = () => {
                         if (suggestions.length > 0) setShowSuggestions(true);
                     }}
                     placeholder="Cidade, Estado"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-transparent rounded-lg leading-5 bg-white/10 text-white placeholder-blue-200 focus:outline-none focus:bg-white/20 focus:ring-0 sm:text-sm transition-colors"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-700/50 rounded-lg leading-5 bg-gray-900/90 text-white autofill-dark placeholder-gray-400 focus:outline-none focus:bg-gray-900 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors shadow-sm"
                 />
 
                 {/* Suggestions Dropdown */}

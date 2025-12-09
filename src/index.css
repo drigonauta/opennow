@@ -6,6 +6,50 @@
         color: #EAF6FF;
         @apply antialiased;
     }
+
+    /* Force Autofill to respect our theme */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px #0E1621 inset !important;
+        /* Match card background for dark inputs */
+        -webkit-text-fill-color: #EAF6FF !important;
+    }
+
+    /* For white background inputs specifically, we need to override the above general rule or handle it via a specific class. 
+       However, the issue is likely the general rule might break the white search bar if we force dark bg. 
+       Let's use a more specific selector if possible or rely on utility classes.
+       For now, let's fix the white BG autofill issue by setting transition-delay to 'hide' the change or just force dark.
+       Actually, the SearchBar is light. 
+       Let's create a utility class for light inputs and dark inputs.
+    */
+}
+
+@layer utilities {
+    .animate-bounce-slow {
+        animation: bounce 3s infinite;
+    }
+
+    /* Utility to force light background on autofill for light inputs */
+    .autofill-light:-webkit-autofill,
+    .autofill-light:-webkit-autofill:hover,
+    .autofill-light:-webkit-autofill:focus,
+    .autofill-light:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px white inset !important;
+        -webkit-text-fill-color: #111827 !important;
+        /* text-gray-900 */
+    }
+
+    /* Utility to force dark background on autofill for dark inputs */
+    .autofill-dark:-webkit-autofill,
+    .autofill-dark:-webkit-autofill:hover,
+    .autofill-dark:-webkit-autofill:focus,
+    .autofill-dark:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px #0E1621 inset !important;
+        /* bg-ta-card */
+        -webkit-text-fill-color: white !important;
+    }
 }
 
 @keyframes bounce {
@@ -19,12 +63,6 @@
     50% {
         transform: none;
         animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-    }
-}
-
-@layer utilities {
-    .animate-bounce-slow {
-        animation: bounce 3s infinite;
     }
 }
 

@@ -24,7 +24,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
     const { currentCity } = useLocation();
     const [showClaimModal, setShowClaimModal] = useState(false);
     // Determine status for styling
-    const isOpen = propIsOpen ?? false;
+    const isOpen = propIsOpen ?? false; // Restored
+    const [isSponsored, setIsSponsored] = useState(false);
+
+    React.useEffect(() => {
+        setIsSponsored(!!(business.highlight_expires_at && business.highlight_expires_at > Date.now()));
+    }, [business.highlight_expires_at]);
+    const isDominante = business.plan === 'dominante';
+    const isPro = business.plan === 'pro';
 
     const whatsappLink = createWhatsAppMessageLink(
         business.whatsapp,
@@ -36,14 +43,34 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
 
     return (
         <Link to={`/business/${business.business_id}`} className={`
-            block bg-ta-card rounded-xl shadow-lg border p-4 mb-3 transition-all duration-500 hover:shadow-neon-blue hover:border-ta-blue/30
-            ${isOpen ? 'border-ta-green/30' : 'border-gray-800'}
+            block bg-ta-card rounded-xl shadow-lg border p-4 mb-3 transition-all duration-500
+            ${isSponsored ? 'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-[1.02]' : ''}
+            ${isDominante ? 'border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : ''}
+            ${!isSponsored && !isDominante && isOpen ? 'border-ta-green/30' : ''}
+            ${!isSponsored && !isDominante && !isOpen ? 'border-gray-800' : ''}
+            hover:border-ta-blue/30 hover:scale-[1.02]
         `}>
+            {isSponsored && (
+                <div className="mb-2">
+                    <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                        Patrocinado
+                    </span>
+                </div>
+            )}
+
             <div className="flex justify-between items-start mb-2">
                 <div>
                     <h3 className="font-bold text-lg text-white flex items-center gap-1">
                         {business.name}
-                        {business.is_verified && (
+                        {/* Dominante Badge - Gold Crown */}
+                        {isDominante && (
+                            <div className="relative group">
+                                <div className="absolute inset-0 bg-yellow-500 blur-sm opacity-50 rounded-full"></div>
+                                <Star fill="#EAB308" className="text-yellow-500 relative z-10 w-5 h-5" />
+                            </div>
+                        )}
+                        {/* Pro Badge - Blue Check */}
+                        {(isPro || business.is_verified) && !isDominante && (
                             <div className="relative">
                                 <div className="absolute inset-0 bg-ta-blue blur-sm opacity-50 rounded-full"></div>
                                 <BadgeCheck size={18} className="text-ta-blue relative z-10" fill="#0E1621" />
@@ -74,7 +101,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         href={whatsappLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-ta-green text-black py-3 rounded-lg font-extrabold text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,255,136,0.4)] hover:shadow-[0_0_25px_rgba(0,255,136,0.7)] hover:scale-105 transition-all duration-300 border border-ta-green"
+                        className="flex-1 bg-ta-green text-black py-3 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(57,255,20,0.4)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-105 transition-all duration-300 transform"
                         onClick={(e) => {
                             e.stopPropagation();
                             AnalyticsService.logEvent('whatsapp', business.business_id, user?.uid);
@@ -120,7 +147,7 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                             window.location.href = `tel:${business.phone || business.whatsapp}`;
                         }
                     }}
-                    className="flex-1 bg-transparent border-2 border-ta-blue text-ta-blue py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,180,255,0.2)] hover:bg-ta-blue hover:text-black hover:shadow-[0_0_20px_rgba(0,180,255,0.6)] hover:scale-105 transition-all duration-300"
+                    className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-gray-100 hover:scale-105 transition-all duration-300 transform"
                     title="Ligar Agora"
                 >
                     <Phone size={16} />

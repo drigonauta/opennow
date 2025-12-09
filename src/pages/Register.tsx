@@ -37,7 +37,8 @@ export const Register: React.FC = () => {
             close_time: formData.closeTime,
             whatsapp: formData.whatsapp,
             latitude: userLocation?.lat || -19.747,
-            longitude: userLocation?.lng || -47.939
+            longitude: userLocation?.lng || -47.939,
+            plan: 'free'
         });
         navigate('/');
     };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBusiness } from '../context/BusinessContext';
 import { ClaimWizard } from '../components/claim/ClaimWizard';
@@ -7,22 +7,8 @@ import { Building2, Loader2 } from 'lucide-react';
 export const ClaimPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { businesses } = useBusiness();
-    const [loading, setLoading] = useState(true);
-    const [business, setBusiness] = useState<any>(null);
-
-    useEffect(() => {
-        if (id && businesses.length > 0) {
-            const found = businesses.find(b => b.business_id === id);
-            if (found) {
-                setBusiness(found);
-            }
-            setLoading(false);
-        } else if (businesses.length > 0) {
-            // If businesses loaded but not found
-            setLoading(false);
-        }
-    }, [id, businesses]);
+    const { businesses, loading } = useBusiness();
+    const business = businesses.find(b => b.business_id === id);
 
     const handleClose = () => {
         navigate('/');

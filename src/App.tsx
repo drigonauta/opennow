@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { LocationProvider } from './context/LocationContext';
 import { EventProvider } from './context/EventContext';
+import { AdsProvider } from './context/AdsContext';
 
 import { Home } from './pages/Home';
 import { MapPage } from './pages/MapPage';
@@ -69,51 +70,53 @@ const App: React.FC = () => {
             <Router>
               <ChatContext.Provider value={{ isChatOpen, setIsChatOpen }}>
                 <EventProvider>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/register-lead" element={<RegisterLead />} />
-                    <Route path="/register-business" element={<RegisterBusiness />} />
-                    <Route path="/map" element={<MapPage />} />
-                    <Route path="/business/:id" element={<RequireLeadAuth><BusinessDetails /></RequireLeadAuth>} />
-                    <Route path="/reivindicar/:id" element={<ClaimPage />} />
+                  <AdsProvider>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="/register-lead" element={<RegisterLead />} />
+                      <Route path="/register-business" element={<RegisterBusiness />} />
+                      <Route path="/map" element={<MapPage />} />
+                      <Route path="/business/:id" element={<RequireLeadAuth><BusinessDetails /></RequireLeadAuth>} />
+                      <Route path="/reivindicar/:id" element={<ClaimPage />} />
 
-                    {/* Legacy/Alias Routes */}
-                    <Route path="/open-now" element={<Home />} />
-                    <Route path="/stores" element={<Home />} />
-                    <Route path="/status" element={<StatusControl />} />
+                      {/* Legacy/Alias Routes */}
+                      <Route path="/open-now" element={<Home />} />
+                      <Route path="/stores" element={<Home />} />
+                      <Route path="/status" element={<StatusControl />} />
 
-                    {/* Dashboard Routes */}
-                    <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-                      <Route index element={<DashboardHome />} />
-                      <Route path="status" element={<StatusControl />} />
-                      <Route path="edit" element={<BusinessEditor />} />
-                      <Route path="premium" element={<PremiumPage />} />
-                      <Route path="analytics" element={<Analytics />} />
-                      <Route path="finance" element={<FinancePage />} />
-                      <Route path="finance" element={<FinancePage />} />
-                      <Route path="marketing" element={<MarketingPanel />} />
-                      <Route path="referral" element={<ReferralPage />} />
-                    </Route>
+                      {/* Dashboard Routes */}
+                      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+                        <Route index element={<DashboardHome />} />
+                        <Route path="status" element={<StatusControl />} />
+                        <Route path="edit" element={<BusinessEditor />} />
+                        <Route path="premium" element={<PremiumPage />} />
+                        <Route path="analytics" element={<Analytics />} />
+                        <Route path="finance" element={<FinancePage />} />
+                        <Route path="finance" element={<FinancePage />} />
+                        <Route path="marketing" element={<MarketingPanel />} />
+                        <Route path="referral" element={<ReferralPage />} />
+                      </Route>
 
-                    {/* Admin Routes */}
-                    <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route path="/admin" element={
-                      <RequireAdminAuth>
-                        <AdminLayout />
-                      </RequireAdminAuth>
-                    }>
-                      <Route index element={<AdminOverview />} />
-                      <Route path="businesses" element={<AdminBusinesses />} />
-                      <Route path="approvals" element={<AdminApprovals />} />
-                      <Route path="locations" element={<AdminLocations />} />
-                      <Route path="leads" element={<AdminLeads />} />
-                      <Route path="categories" element={<AdminCategories />} />
-                      <Route path="import" element={<AdminImport />} />
-                    </Route>
-                    <Route path="/google-map" element={<GoogleMapDemo />} />
-                  </Routes>
+                      {/* Admin Routes */}
+                      <Route path="/admin/login" element={<AdminLogin />} />
+                      <Route path="/admin" element={
+                        <RequireAdminAuth>
+                          <AdminLayout />
+                        </RequireAdminAuth>
+                      }>
+                        <Route index element={<AdminOverview />} />
+                        <Route path="businesses" element={<AdminBusinesses />} />
+                        <Route path="approvals" element={<AdminApprovals />} />
+                        <Route path="locations" element={<AdminLocations />} />
+                        <Route path="leads" element={<AdminLeads />} />
+                        <Route path="categories" element={<AdminCategories />} />
+                        <Route path="import" element={<AdminImport />} />
+                      </Route>
+                      <Route path="/google-map" element={<GoogleMapDemo />} />
+                    </Routes>
+                  </AdsProvider>
 
                   {/* Nôni AI Chat */}
                   <ChatButton />

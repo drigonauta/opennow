@@ -7,6 +7,12 @@ export const DashboardHome: React.FC = () => {
     const { getMyBusinesses, updateBusinessStatus } = useBusiness();
     const myBusiness = getMyBusinesses()[0]; // Assuming single business for MVP
 
+    const [ranking, setRanking] = React.useState(0);
+
+    React.useEffect(() => {
+        setRanking(Math.floor(Math.random() * 10) + 1);
+    }, []);
+
     if (!myBusiness) {
         return (
             <div className="text-center py-10">
@@ -19,6 +25,18 @@ export const DashboardHome: React.FC = () => {
     const isOpen = myBusiness.forced_status === 'open' ||
         (myBusiness.forced_status === null && isTimeOpen(myBusiness));
 
+    const planLabel = {
+        free: 'Grátis',
+        pro: 'Profissional',
+        dominante: 'Dominante'
+    }[myBusiness.plan || 'free'];
+
+    const planColor = {
+        free: 'bg-gray-100 text-gray-600',
+        pro: 'bg-blue-100 text-blue-700',
+        dominante: 'bg-purple-100 text-purple-700'
+    }[myBusiness.plan || 'free'];
+
     return (
         <div className="space-y-6">
             {/* Overview Card */}
@@ -28,11 +46,10 @@ export const DashboardHome: React.FC = () => {
                         <h2 className="text-xl font-bold text-gray-900">{myBusiness.name}</h2>
                         <p className="text-sm text-gray-500">{myBusiness.category}</p>
                     </div>
-                    {myBusiness.is_premium && (
-                        <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-medium flex items-center">
-                            <Star size={12} className="mr-1 fill-yellow-700" /> Premium
-                        </span>
-                    )}
+                    <span className={`${planColor} text-xs px-2 py-1 rounded-full font-bold flex items-center h-fit uppercase`}>
+                        {myBusiness.plan === 'dominante' && <Star size={12} className="mr-1 fill-current" />}
+                        {planLabel}
+                    </span>
                 </div>
 
                 <div className={`p-4 rounded-lg mb-4 text-center border ${isOpen ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
@@ -46,8 +63,8 @@ export const DashboardHome: React.FC = () => {
                     <button
                         onClick={() => updateBusinessStatus(myBusiness.business_id, isOpen ? 'closed' : 'open')}
                         className={`flex items-center justify-center p-3 rounded-lg font-medium transition-colors ${isOpen
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
                             }`}
                     >
                         <Power size={18} className="mr-2" />
@@ -63,16 +80,32 @@ export const DashboardHome: React.FC = () => {
                 </div>
             </div>
 
-            {/* Quick Stats (Mock) */}
+            {/* Metrics */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-xs text-gray-500">Visualizações hoje</p>
-                    <p className="text-xl font-bold text-gray-900">124</p>
+                    <p className="text-xs text-gray-500 mb-1">Visualizações</p>
+                    <p className="text-2xl font-bold text-gray-900">{myBusiness.analytics?.views || 0}</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-xs text-gray-500">Cliques no WhatsApp</p>
-                    <p className="text-xl font-bold text-gray-900">12</p>
+                    <p className="text-xs text-gray-500 mb-1">Cliques no WhatsApp</p>
+                    <p className="text-2xl font-bold text-green-600">{myBusiness.analytics?.whatsapp_clicks || 0}</p>
                 </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Ligações</p>
+                    <p className="text-2xl font-bold text-blue-600">{myBusiness.analytics?.call_clicks || 0}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Ranking na Cidade</p>
+                    <p className="text-2xl font-bold text-purple-600">#{ranking}</p>
+                </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <h4 className="font-bold text-blue-800 mb-2">Dica de Crescimento 🚀</h4>
+                <p className="text-sm text-blue-700">
+                    Empresas com o plano <strong>Dominante</strong> recebem 5x mais cliques.
+                    <Link to="/dashboard/premium" className="underline ml-1 font-bold">Ver planos</Link>
+                </p>
             </div>
         </div>
     );

@@ -9,7 +9,8 @@ import { getAuth } from 'firebase-admin/auth';
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        projectId: process.env.VITE_FIREBASE_PROJECT_ID
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
     });
     console.log('🔥 Firebase Admin SDK Initialized on Server');
 }

@@ -39,24 +39,28 @@ export const Login: React.FC = () => {
         try {
             // reCAPTCHA Integration
             if (typeof grecaptcha !== 'undefined') {
-                await new Promise<void>((resolve) => {
-                    grecaptcha.enterprise.ready(async () => {
-                        try {
-                            const token = await grecaptcha.enterprise.execute('6LddCx0sAAAAAF1HD8HxsuO_TDDBbwpIe3I26_3h', { action: 'LOGIN' });
-                            console.log('reCAPTCHA Token generated:', token);
+                const token = grecaptcha.enterprise.getResponse();
+                if (!token) {
+                    setError('Por favor, complete a verificação "Não sou um robô".');
+                    setLoading(false);
+                    return;
+                }
 
-                            // Send token to backend for logging/verification
-                            await fetch('/api/recaptcha/log', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ token, action: 'LOGIN' })
-                            });
-                        } catch (error) {
-                            console.error('reCAPTCHA error:', error);
-                        }
-                        resolve();
-                    });
+                console.log('reCAPTCHA Token:', token);
+
+                // Verify token with backend
+                const verifyRes = await fetch('/api/recaptcha/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, action: 'LOGIN' })
                 });
+
+                const verifyData = await verifyRes.json();
+                if (!verifyData.success) {
+                    setError('Falha na verificação de segurança (CAPTCHA). Tente novamente.');
+                    setLoading(false);
+                    return;
+                }
             }
 
             await loginWithEmail(email, password);
@@ -134,13 +138,18 @@ export const Login: React.FC = () => {
                         </div>
 
                         <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                            >
-                                {loading ? 'Entrando...' : 'Entrar'}
-                            </button>
+                            <div>
+                                {/* reCAPTCHA Widget */}
+                                <div className="g-recaptcha mb-4" data-sitekey="6LfnaiUsAAAAALvf7FKe1DtelkEEyKFImbUwbPbD" data-action="LOGIN"></div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                                >
+                                    {loading ? 'Entrando...' : 'Entrar'}
+                                </button>
+                            </div>
                         </div>
                     </form>
 

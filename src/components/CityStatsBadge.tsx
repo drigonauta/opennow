@@ -17,11 +17,6 @@ export const CityStatsBadge: React.FC = () => {
     const [displayClosed, setDisplayClosed] = useState(0);
 
     useEffect(() => {
-        // Reset to 0 when city changes to trigger animation from 0
-        setDisplayTotal(0);
-        setDisplayOpen(0);
-        setDisplayClosed(0);
-
         const duration = 800; // 0.8s
         const startTime = performance.now();
 

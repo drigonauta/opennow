@@ -12,6 +12,8 @@ import { CityStatsBadge } from '../components/CityStatsBadge';
 import { UserStatusBadge } from '../components/UserStatusBadge';
 
 
+import { AdBanner } from '../components/AdBanner'; // Import AdBanner
+
 export const Home: React.FC = () => {
     const { businesses, filteredBusinesses, error, lastUpdated, sortBy, setSortBy, refreshBusinesses, selectedCategory, setSelectedCategory } = useBusiness();
     const { currentCity, userLocation } = useLocation();
@@ -241,6 +243,7 @@ export const Home: React.FC = () => {
                             selected={selectedCategory}
                             onSelect={setSelectedCategory}
                         />
+                        <AdBanner />
                     </div>
                 </div>
             </div>

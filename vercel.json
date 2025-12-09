@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/server/index.js"
+            "destination": "https://opennow-282091951030.us-central1.run.app/api/$1"
         },
         {
             "source": "/(.*)",
@@ -10,10 +10,6 @@
         }
     ],
     "builds": [
-        {
-            "src": "server/index.js",
-            "use": "@vercel/node"
-        },
         {
             "src": "package.json",
             "use": "@vercel/static-build",

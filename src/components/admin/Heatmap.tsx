@@ -5,8 +5,13 @@ export const Heatmap: React.FC = () => {
     const weeks = 52;
     const days = 7;
 
-    const getIntensity = () => {
-        const rand = Math.random();
+    const [data, setData] = React.useState<number[]>([]);
+
+    React.useEffect(() => {
+        setData(Array.from({ length: weeks * days }).map(() => Math.random()));
+    }, []);
+
+    const getIntensity = (rand: number) => {
         if (rand > 0.9) return 'bg-blue-500';
         if (rand > 0.7) return 'bg-blue-600/80';
         if (rand > 0.5) return 'bg-blue-700/60';
@@ -27,13 +32,17 @@ export const Heatmap: React.FC = () => {
             <div className="flex gap-1 overflow-hidden">
                 {Array.from({ length: weeks }).map((_, w) => (
                     <div key={w} className="flex flex-col gap-1">
-                        {Array.from({ length: days }).map((_, d) => (
-                            <div
-                                key={d}
-                                className={`w-3 h-3 rounded-sm ${getIntensity()} hover:ring-1 hover:ring-white transition-all cursor-pointer`}
-                                title={`Atividade: ${Math.floor(Math.random() * 100)}`}
-                            ></div>
-                        ))}
+                        {Array.from({ length: days }).map((_, d) => {
+                            const index = w * days + d;
+                            const rand = data[index];
+                            return (
+                                <div
+                                    key={d}
+                                    className={`w-3 h-3 rounded-sm ${getIntensity(rand)} hover:ring-1 hover:ring-white transition-all cursor-pointer`}
+                                    title={`Atividade: ${Math.floor(rand * 100)}`}
+                                ></div>
+                            );
+                        })}
                     </div>
                 ))}
             </div>
