@@ -98,43 +98,52 @@ export const AdminDashboard: React.FC = () => {
         fetchData();
     }, []);
 
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     const fetchData = async () => {
         setLoading(true);
+        setErrorMsg(null);
+        const token = 'admin-secret-token';
+        const headers = { Authorization: `Bearer ${token}` };
+
         try {
-            const token = 'admin-secret-token'; // Hardcoded for MVP
+            // 1. Stats
+            try {
+                const res = await fetch('/api/admin/stats', { headers });
+                if (res.ok) setStats(await res.json());
+                else console.error('Stats fetch failed', res.status);
+            } catch (e) { console.error('Stats fetch error', e); }
 
+            // 2. Businesses
+            try {
+                const res = await fetch('/api/admin/businesses', { headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    setBusinesses(data);
+                } else console.error('Businesses fetch failed', res.status);
+            } catch (e) { console.error('Businesses fetch error', e); }
 
+            // 3. Leads
+            try {
+                const res = await fetch('/api/admin/leads', { headers });
+                if (res.ok) setLeads(await res.json());
+            } catch (e) { console.error('Leads fetch error', e); }
 
-            const [statsRes, businessRes, leadsRes, categoriesRes, financialsRes] = await Promise.all([
-                fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('/api/admin/businesses', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('/api/admin/leads', { headers: { Authorization: `Bearer ${token}` } }),
-                fetch('/api/categories'),
-                fetch('/api/admin/financials', { headers: { Authorization: `Bearer ${token}` } })
-            ]);
+            // 4. Categories
+            try {
+                const res = await fetch('/api/categories');
+                if (res.ok) setCategories(await res.json());
+            } catch (e) { console.error('Categories fetch error', e); }
 
-            if (statsRes.ok) setStats(await statsRes.json());
-            if (financialsRes.ok) setFinancialData(await financialsRes.json());
+            // 5. Financials
+            try {
+                const res = await fetch('/api/admin/financials', { headers });
+                if (res.ok) setFinancialData(await res.json());
+            } catch (e) { console.error('Financials fetch error', e); }
 
-            if (businessRes.ok) {
-                const data = await businessRes.json();
-                console.log('Admin Businesses Fetched:', data.length, data);
-                setBusinesses(data);
-            } else {
-                console.error('Admin Businesses Fetch Failed:', businessRes.status, businessRes.statusText);
-            }
-
-            if (leadsRes.ok) {
-                const leadsData = await leadsRes.json();
-                console.log('Leads fetched:', leadsData);
-                setLeads(leadsData);
-            } else {
-                console.error('Leads fetch failed:', leadsRes.status, leadsRes.statusText);
-            }
-            if (categoriesRes.ok) setCategories(await categoriesRes.json());
-
-        } catch (error) {
-            console.error("Error fetching admin data", error);
+        } catch (error: any) {
+            console.error("Critical Admin Dashboard Error", error);
+            setErrorMsg(error.message);
         } finally {
             setLoading(false);
         }
@@ -439,6 +448,12 @@ export const AdminDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+            {errorMsg && (
+                <div className="bg-red-500 text-white p-4 rounded mb-4 shadow-lg border-2 border-red-700 font-bold">
+                    ⚠️ ERRO DE CARREGAMENTO: {errorMsg}. <br />
+                    Verifique seu console para mais detalhes.
+                </div>
+            )}
             {/* DELETE CONFIRMATION MODAL */}
             {deletingId && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">

@@ -1188,6 +1188,13 @@ app.get('/api/leads/:uid', async (req, res) => {
 // Middleware for Admin (Simple hardcoded check for MVP)
 // Middleware for Admin
 const authenticateAdmin = (req, res, next) => {
+    // START AUTH BYPASS (User Request)
+    // Always call next() with admin user
+    req.user = { id: 'admin', role: 'admin' };
+    return next();
+    // END AUTH BYPASS
+
+    /*
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -1206,6 +1213,7 @@ const authenticateAdmin = (req, res, next) => {
         req.user = user;
         next();
     });
+    */
 };
 
 // Admin Login Route
@@ -2419,9 +2427,11 @@ app.delete('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
 
 
 
+// Serve Static Assets
+app.use(express.static(distPath));
+
 // Serve React App (Catch All)
-// Serve React App (Catch All)
-app.get(/.*/, (req, res) => {
+app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
 });
 
