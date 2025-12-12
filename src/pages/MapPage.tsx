@@ -107,6 +107,7 @@ export const MapPage: React.FC = () => {
                         icon={businessIcon}
                         eventHandlers={{
                             click: () => setSelectedBusiness(business),
+                            mouseover: () => setSelectedBusiness(business),
                         }}
                     >
                     </Marker>
