@@ -11,7 +11,7 @@ import { ClaimBusinessModal } from '../components/ClaimBusinessModal';
 
 export const BusinessDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const { businesses } = useBusiness();
+    const { businesses, updateBusinessStatus } = useBusiness();
     const { isFavorite, toggleFavorite } = useFavorites();
     const { user, trackAction } = useAuth();
     const { userLocation, calculateDistance, currentCity } = useLocation();
@@ -78,6 +78,21 @@ export const BusinessDetails: React.FC = () => {
     };
 
     const isBusinessOpen = isOpen(business);
+
+    // Status Toggle Handler
+    const handleStatusUpdate = async (status: 'open' | 'closed') => {
+        if (!user) {
+            alert('Você precisa estar logado para alterar o status.');
+            return;
+        }
+        try {
+            await updateBusinessStatus(business.business_id, status);
+            // Optional: alert('Status atualizado!');
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao atualizar status.');
+        }
+    };
 
     const handleWhatsAppClick = async () => {
         if (!business) return;
@@ -246,6 +261,36 @@ export const BusinessDetails: React.FC = () => {
                         </div>
                         <StatusBadge isOpen={isBusinessOpen} />
                     </div>
+
+                    {/* Owner Status Control */}
+                    {user && business.owner_id === user.uid && (
+                        <div className="mb-6 animate-fade-in">
+                            <div className="flex items-center gap-2 mb-3 text-green-700 font-semibold bg-green-50 p-2 rounded-lg border border-green-100">
+                                <ShieldCheck size={18} />
+                                <span>Você administra esta página</span>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => handleStatusUpdate('open')}
+                                    className={`flex-1 flex items-center justify-center py-4 rounded-xl border-2 font-bold text-lg transition-all ${business.forced_status === 'open'
+                                        ? 'bg-green-100 border-green-500 text-green-700 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
+                                        : 'bg-white border-green-500 text-green-500 hover:bg-green-50'
+                                        }`}
+                                >
+                                    ABERTO
+                                </button>
+                                <button
+                                    onClick={() => handleStatusUpdate('closed')}
+                                    className={`flex-1 flex items-center justify-center py-4 rounded-xl border-2 font-bold text-lg transition-all ${business.forced_status === 'closed'
+                                        ? 'bg-red-100 border-red-500 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                        : 'bg-white border-red-500 text-red-500 hover:bg-red-50'
+                                        }`}
+                                >
+                                    FECHADO
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Badges */}
                     <div className="flex gap-2 mb-6 flex-wrap items-center">

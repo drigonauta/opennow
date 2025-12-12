@@ -26,16 +26,16 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({ selected, onSele
     }, []);
 
     return (
-        <div className="flex overflow-x-auto gap-2 p-4 no-scrollbar">
+        <div className="flex overflow-x-auto gap-3 p-2 no-scrollbar">
             {categories.map((cat) => (
                 <button
                     key={cat.id}
-                    onClick={() => onSelect(cat.id === 'All' ? 'All' : cat.id)} // Use ID for selection
+                    onClick={() => onSelect(cat.id === 'All' ? 'All' : cat.id)}
                     className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                        "px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-300 border",
                         selected === (cat.id === 'All' ? 'All' : cat.id)
-                            ? "bg-blue-600 text-white shadow-md"
-                            : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                            ? "bg-ta-blue/20 text-ta-blue border-ta-blue shadow-[0_0_15px_rgba(0,180,255,0.3)] scale-105"
+                            : "bg-ta-card/80 text-gray-400 border-white/5 hover:border-white/20 hover:text-white hover:bg-ta-card"
                     )}
                 >
                     {cat.label}

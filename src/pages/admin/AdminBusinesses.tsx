@@ -98,13 +98,39 @@ export const AdminBusinesses: React.FC = () => {
                     <h1 className="text-2xl font-bold text-white">Empresas</h1>
                     <p className="text-gray-400">Gerencie todos os negócios cadastrados.</p>
                 </div>
-                <button
-                    onClick={() => openEditModal()}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
-                >
-                    <Plus size={18} />
-                    Nova Empresa
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={async () => {
+                            if (!confirm('ATENÇÃO: Isso excluirá PERMANENTEMENTE todas as empresas sem Cidade ou Estado definidos. Deseja continuar?')) return;
+                            try {
+                                const res = await fetch('/api/admin/maintenance/incomplete', {
+                                    method: 'DELETE',
+                                    headers: { Authorization: 'Bearer admin-secret-token' }
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert(`Limpeza concluída! ${data.count} registros removidos.`);
+                                    window.location.reload(); // Refresh to show changes
+                                } else {
+                                    alert('Erro ao limpar: ' + data.error);
+                                }
+                            } catch (e) {
+                                alert('Erro de conexão.');
+                            }
+                        }}
+                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-red-900/20"
+                    >
+                        <Trash2 size={18} />
+                        Limpar Incompletos
+                    </button>
+                    <button
+                        onClick={() => openEditModal()}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
+                    >
+                        <Plus size={18} />
+                        Nova Empresa
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}

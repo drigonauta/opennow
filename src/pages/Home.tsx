@@ -120,44 +120,55 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Hero Banner */}
-            <div className="bg-gradient-to-r from-ta-card to-gray-900 border-b border-gray-800 text-white py-8 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="relative bg-[#050B11] border-b border-gray-800 text-white py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+                {/* Background Glow Effects */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+                    <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px]" />
+                    <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[100px]" />
+                </div>
+
+                <div className="relative max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center z-10">
 
                     {/* Left Side: Advertising Space */}
-                    <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-blue-300/50 bg-blue-800/30 p-8 text-center hover:bg-blue-800/40 transition-colors group cursor-pointer">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <h3 className="text-2xl font-bold text-blue-100 mb-2">Sua Marca Aqui</h3>
-                        <p className="text-blue-200 mb-4">Alcance milhares de clientes em Uberaba.</p>
-                        <span className="inline-block bg-white/10 backdrop-blur-sm text-white px-6 py-2 rounded-full text-sm font-semibold border border-white/20 group-hover:bg-white group-hover:text-blue-600 transition-all">
+                    <div className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-ta-blue/5 p-8 text-center hover:bg-ta-blue/10 transition-colors group cursor-pointer backdrop-blur-sm">
+                        <div className="absolute inset-0 bg-gradient-to-br from-ta-blue/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <h3 className="text-2xl font-bold text-ta-blue mb-2">Sua Marca Aqui</h3>
+                        <p className="text-blue-200/80 mb-6">Alcance milhares de clientes em Uberaba.</p>
+                        <span className="inline-block bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
                             Anuncie Conosco
                         </span>
                     </div>
 
                     {/* Right Side: User Focus CTA */}
-                    <div className="text-center md:text-left space-y-6">
+                    <div className="text-center md:text-left space-y-8">
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight mb-4 text-white">
+                            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-6 text-white">
                                 Descubra quem está <br className="hidden md:block" />
-                                <span className="text-ta-green drop-shadow-[0_0_15px_rgba(0,255,136,0.6)]">ABERTO AGORA</span> <span className="text-ta-green">na sua cidade.</span>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-ta-green to-emerald-400 drop-shadow-[0_0_10px_rgba(57,255,20,0.5)]">ABERTO AGORA</span>
+                                <br />
+                                <span className="text-2xl md:text-3xl font-medium text-gray-300">na sua cidade.</span>
                             </h1>
-                            <p className="text-lg text-gray-300 max-w-lg mx-auto md:mx-0">
-                                Encontre restaurantes, serviços e lojas abertos neste exato momento.
+                            <p className="text-lg text-gray-400 max-w-lg mx-auto md:mx-0 leading-relaxed">
+                                Encontre restaurantes, serviços e lojas operando neste exato momento. Sem perder viagem.
                             </p>
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-center md:justify-start gap-4">
-                            <Link
-                                to="/login"
-                                className="w-full sm:w-auto bg-ta-blue text-ta-bg px-8 py-4 rounded-full font-bold text-lg shadow-[0_0_15px_rgba(0,180,255,0.4)] hover:bg-white hover:scale-105 transition-all transform flex items-center justify-center gap-2"
+                            <button
+                                onClick={() => {
+                                    setIsOpenOnly(true);
+                                    document.getElementById('business-list')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="w-full sm:w-auto bg-ta-blue text-black px-8 py-4 rounded-full font-bold text-lg shadow-[0_0_20px_rgba(0,180,255,0.3)] hover:bg-white hover:scale-105 transition-all transform flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <span className="font-bold">Ver empresas abertas agora</span>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                 </svg>
-                            </Link>
+                            </button>
                             <Link
                                 to="/login"
-                                className="text-blue-100 hover:text-white font-medium underline decoration-blue-300 underline-offset-4 transition-colors"
+                                className="text-gray-400 hover:text-white font-medium transition-colors px-4 py-2"
                             >
                                 Já tenho conta
                             </Link>
@@ -168,14 +179,12 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Location Selector */}
-            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4">
+            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4 relative z-20">
                 <CitySearch />
             </div>
 
-
-
             {/* Header / Search */}
-            <div className="bg-ta-bg shadow-sm sticky top-0 z-10 border-b border-gray-800">
+            <div className="bg-ta-bg/80 backdrop-blur-xl shadow-lg sticky top-0 z-40 border-b border-white/5 transition-all">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col space-y-4">
                         <div className="flex justify-between items-center">
@@ -254,7 +263,7 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Business List */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main id="business-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {businessesWithDistance.map((business) => (
                         <BusinessCard

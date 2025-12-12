@@ -14,10 +14,7 @@ interface StepConfirmProps {
 export const StepConfirm: React.FC<StepConfirmProps> = ({ businessName, initialData, onNext }) => {
     const [formData, setFormData] = useState(initialData);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onNext(formData);
-    };
+
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -29,7 +26,8 @@ export const StepConfirm: React.FC<StepConfirmProps> = ({ businessName, initialD
                 <p className="text-gray-500 mt-2">Confirme seus dados para iniciarmos o processo de verificação.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Removed generic form submission to manual handling for better UX control */}
+            <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Seu Nome Completo</label>
                     <div className="relative">
@@ -76,12 +74,19 @@ export const StepConfirm: React.FC<StepConfirmProps> = ({ businessName, initialD
                 </div>
 
                 <button
-                    type="submit"
+                    type="button"
+                    onClick={() => {
+                        if (!formData.name || !formData.email || !formData.phone) {
+                            alert("Por favor, preencha todos os campos.");
+                            return;
+                        }
+                        onNext(formData);
+                    }}
                     className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transform hover:scale-[1.02] transition-all shadow-lg shadow-blue-200 mt-6"
                 >
                     Continuar
                 </button>
-            </form>
+            </div>
         </div>
     );
 };

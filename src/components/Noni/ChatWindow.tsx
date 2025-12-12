@@ -43,7 +43,11 @@ export const ChatWindow: React.FC = () => {
                 body: JSON.stringify({
                     message: userMsg.text,
                     userLocation,
-                    userId: 'guest' // Replace with real ID if available
+                    userId: 'guest',
+                    history: messages.slice(-10).map(m => ({
+                        role: m.sender === 'user' ? 'user' : 'model',
+                        parts: [{ text: m.text }]
+                    }))
                 })
             });
 
@@ -122,6 +126,15 @@ export const ChatWindow: React.FC = () => {
                                                     <MapPin size={10} className="mr-1" />
                                                     {Number(distances[business.business_id]).toFixed(1)} km
                                                 </p>
+                                            )}
+                                            {business.whatsapp && business.whatsapp !== 'N/A' && (
+                                                <button
+                                                    onClick={() => window.open(`https://wa.me/55${business.whatsapp.replace(/\D/g, '')}`, '_blank')}
+                                                    className="mt-2 w-full bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded-full flex items-center justify-center gap-1 transition-colors"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                                    Chamar no Zap
+                                                </button>
                                             )}
                                         </div>
                                     ))}

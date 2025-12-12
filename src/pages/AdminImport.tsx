@@ -63,7 +63,7 @@ export const AdminImport: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer dev-token'
+                    'Authorization': 'Bearer admin-secret-token'
                 },
                 body: JSON.stringify({
                     term,
@@ -141,7 +141,7 @@ export const AdminImport: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer dev-token'
+                    'Authorization': 'Bearer admin-secret-token'
                 },
                 body: JSON.stringify({
                     businesses: selectedBusinesses,

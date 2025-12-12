@@ -36,7 +36,7 @@ export const MarketingPanel: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'dev-token'}`
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'admin-secret-token'}`
                 },
                 body: JSON.stringify({
                     businessId: business.business_id,

@@ -2,9 +2,10 @@
     "name": "TáAberto",
     "short_name": "TáAberto",
     "start_url": "/",
+    "id": "/",
     "display": "standalone",
-    "background_color": "#050B11",
-    "theme_color": "#050B11",
+    "background_color": "#000000",
+    "theme_color": "#000000",
     "icons": [
         {
             "src": "/favicon-neon.png",

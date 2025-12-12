@@ -169,7 +169,22 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const updateBusinessStatus = async (businessId: string, status: 'open' | 'closed' | null) => {
-        await updateBusiness(businessId, { forced_status: status });
+        const token = getToken();
+        if (!token) throw new Error("Must be logged in");
+
+        await fetch(`/api/business/${businessId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status })
+        });
+
+        // Optimistic local update (or fetchBusinesses will catch it from broadcast)
+        setBusinesses(prev => prev.map(b =>
+            b.business_id === businessId ? { ...b, forced_status: status } : b
+        ));
     };
 
     const updateBusiness = async (id: string, updates: Partial<Business>) => {

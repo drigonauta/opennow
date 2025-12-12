@@ -103,41 +103,64 @@ export const AdminDashboard: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         setErrorMsg(null);
-        const token = 'admin-secret-token';
-        const headers = { Authorization: `Bearer ${token}` };
+
 
         try {
             // 1. Stats
             try {
-                const res = await fetch('/api/admin/stats', { headers });
-                if (res.ok) setStats(await res.json());
-                else console.error('Stats fetch failed', res.status);
+                const res = await fetch(`/api/admin/stats?_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer admin-secret-token` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('Stats Data:', data);
+                    setStats(data);
+                } else {
+                    const txt = await res.text();
+                    console.error('Stats Failed:', res.status, txt);
+                    setErrorMsg(`Stats Error: ${res.status}`);
+                }
             } catch (e) { console.error('Stats fetch error', e); }
 
             // 2. Businesses
             try {
-                const res = await fetch('/api/admin/businesses', { headers });
+                const res = await fetch(`/api/admin/businesses?_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer admin-secret-token` }
+                });
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('Businesses Data Length:', data.length);
                     setBusinesses(data);
                 } else console.error('Businesses fetch failed', res.status);
             } catch (e) { console.error('Businesses fetch error', e); }
 
             // 3. Leads
             try {
-                const res = await fetch('/api/admin/leads', { headers });
+                const res = await fetch(`/api/admin/leads?_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer admin-secret-token` }
+                });
                 if (res.ok) setLeads(await res.json());
-            } catch (e) { console.error('Leads fetch error', e); }
+            } catch (e) {
+                console.error('Leads fetch error', e);
+                // Don't block UI on leads error
+            }
 
             // 4. Categories
             try {
-                const res = await fetch('/api/categories');
-                if (res.ok) setCategories(await res.json());
+                const res = await fetch(`/api/admin/debug-categories?_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer admin-secret-token` }
+                });
+                if (res.ok) {
+                    const body = await res.json();
+                    setCategories(body.categories || []);
+                }
             } catch (e) { console.error('Categories fetch error', e); }
 
             // 5. Financials
             try {
-                const res = await fetch('/api/admin/financials', { headers });
+                const res = await fetch(`/api/admin/financials?_t=${Date.now()}`, {
+                    headers: { Authorization: `Bearer admin-secret-token` }
+                });
                 if (res.ok) setFinancialData(await res.json());
             } catch (e) { console.error('Financials fetch error', e); }
 
@@ -421,7 +444,7 @@ export const AdminDashboard: React.FC = () => {
                 const lngOffset = (Math.random() - 0.5) * 0.04;
 
                 try {
-                    await fetch(`/api/business/update/${b.business_id}`, {
+                    await fetch(`/api/admin/business/${b.business_id}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -448,6 +471,15 @@ export const AdminDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+            {/* DEBUG OVERLAY */}
+            <div className="bg-black/80 p-4 mb-4 rounded border border-yellow-500 font-mono text-xs overflow-auto max-h-40">
+                <p className="text-yellow-400 font-bold">--- DEBUG INFO ---</p>
+                <p>Stats Data: {JSON.stringify(stats)}</p>
+                <p>Businesses Count: {businesses.length}</p>
+                <p>Error Msg: {errorMsg || 'None'}</p>
+                <p>Last Sync: {new Date().toLocaleTimeString()}</p>
+                <p>API Endpoint: /api/admin/stats</p>
+            </div>
             {errorMsg && (
                 <div className="bg-red-500 text-white p-4 rounded mb-4 shadow-lg border-2 border-red-700 font-bold">
                     ⚠️ ERRO DE CARREGAMENTO: {errorMsg}. <br />

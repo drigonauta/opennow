@@ -17,7 +17,7 @@ export const AdminLocations: React.FC = () => {
                 const lngOffset = (Math.random() - 0.5) * 0.04;
 
                 try {
-                    await fetch(`/api/business/update/${b.business_id}`, {
+                    await fetch(`/api/admin/business/${b.business_id}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',

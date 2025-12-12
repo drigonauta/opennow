@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import 'dotenv/config';
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
