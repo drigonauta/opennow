@@ -1,8 +1,6 @@
-```
 import React from 'react';
 import { MapPin, RefreshCw } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
-import { API_BASE_URL } from '../../lib/api';
 
 export const AdminLocations: React.FC = () => {
     const { businesses, refreshData } = useAdmin();
@@ -19,11 +17,11 @@ export const AdminLocations: React.FC = () => {
                 const lngOffset = (Math.random() - 0.5) * 0.04;
 
                 try {
-                    await fetch(`${ API_BASE_URL } /api/admin / business / ${ b.business_id } `, {
+                    await fetch(`/api/admin/business/${b.business_id}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer admin - secret - token`
+                            'Authorization': `Bearer admin-secret-token`
                         },
                         body: JSON.stringify({
                             latitude: -19.747 + latOffset,
@@ -38,12 +36,12 @@ export const AdminLocations: React.FC = () => {
         });
 
         await Promise.all(updates);
-        alert(`${ count } empresas tiveram suas localizações simuladas!`);
+        alert(`${count} empresas tiveram suas localizações simuladas!`);
         refreshData();
     };
 
     const locationStats = Object.entries(businesses.reduce((acc: any, b: any) => {
-        const key = `${ b.state || 'N/A' } - ${ b.city || 'N/A' } `;
+        const key = `${b.state || 'N/A'} - ${b.city || 'N/A'}`;
         acc[key] = (acc[key] || 0) + 1;
         return acc;
     }, {}));

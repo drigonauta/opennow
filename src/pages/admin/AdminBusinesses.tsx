@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Filter, Edit, Trash2, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../lib/api';
 import { useAdmin } from '../../context/AdminContext';
 
 export const AdminBusinesses: React.FC = () => {
@@ -33,18 +31,17 @@ export const AdminBusinesses: React.FC = () => {
         });
     }, [businesses, searchTerm, statusFilter]);
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza? Isso deletará PERMANENTEMENTE a empresa.')) return;
+    const handleDelete = async () => {
+        if (!deletingId) return;
         setIsDeleting(true);
         try {
-            const token = localStorage.getItem('admin_token');
-            const res = await fetch(`${API_BASE_URL}/api/admin/business/${id}`, {
+            const res = await fetch(`/api/admin/business/${deletingId}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer admin-secret-token` }
             });
 
             if (res.ok) {
-                setBusinesses(prev => prev.filter(b => b.business_id !== id));
+                setBusinesses(prev => prev.filter(b => b.business_id !== deletingId));
                 setDeletingId(null);
             } else {
                 alert('Erro ao excluir');
@@ -60,14 +57,13 @@ export const AdminBusinesses: React.FC = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const isNew = !editingBusiness.business_id;
-        const url = isNew ? `${API_BASE_URL}/api/admin/business/create` : `${API_BASE_URL}/api/admin/business/${editingBusiness.business_id}`;
+        const url = isNew ? '/api/admin/business/create' : `/api/admin/business/${editingBusiness.business_id}`;
         const method = isNew ? 'POST' : 'PUT';
 
         try {
-            const token = localStorage.getItem('admin_token');
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer admin-secret-token` },
                 body: JSON.stringify(editingBusiness)
             });
             if (res.ok) {

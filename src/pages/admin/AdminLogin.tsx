@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, Loader2 } from 'lucide-react';
 
-import { API_BASE_URL } from '../../lib/api';
-
 export default function AdminLogin() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -19,7 +17,7 @@ export default function AdminLogin() {
         try {
             // reCAPTCHA Removed per user request
 
-            const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+            const res = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })

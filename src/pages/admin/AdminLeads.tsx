@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Search, Plus, Trash2, Edit, Phone, Mail } from 'lucide-react';
-import { Badge } from '../../components/ui/Badge';
-import { API_BASE_URL } from '../../lib/api';
 import { useAdmin } from '../../context/AdminContext';
 
 export const AdminLeads: React.FC = () => {
@@ -17,10 +15,9 @@ export const AdminLeads: React.FC = () => {
     const handleDelete = async (uid: string) => {
         if (!confirm('Excluir este lead?')) return;
         try {
-            const token = localStorage.getItem('admin_token');
-            await fetch(`${API_BASE_URL}/api/admin/lead/${uid}`, {
+            await fetch(`/api/admin/lead/${uid}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer admin-secret-token` }
             });
             setLeads(prev => prev.filter(l => l.uid !== uid));
         } catch {
