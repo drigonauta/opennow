@@ -13,6 +13,7 @@ import { UserStatusBadge } from '../components/UserStatusBadge';
 
 
 import { AdBanner } from '../components/AdBanner'; // Import AdBanner
+import { API_BASE_URL } from '../lib/api';
 
 export const Home: React.FC = () => {
     const { businesses, filteredBusinesses, error, lastUpdated, sortBy, setSortBy, refreshBusinesses, selectedCategory, setSelectedCategory } = useBusiness();
@@ -48,7 +49,7 @@ export const Home: React.FC = () => {
                 console.log(`City changed to ${currentCity} (norm: ${normCurrentCity}), auto-importing...`);
                 // Trigger a generic search to populate
                 // We use "Restaurante" as a safe default to get some content
-                fetch('/api/search/hybrid', {
+                fetch(`${API_BASE_URL}/api/search/hybrid`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -228,7 +229,7 @@ export const Home: React.FC = () => {
                                 if (!term) return;
                                 // Call Hybrid Search
                                 try {
-                                    const res = await fetch('/api/search/hybrid', {
+                                    const res = await fetch(`${API_BASE_URL}/api/search/hybrid`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({

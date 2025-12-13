@@ -1,8 +1,11 @@
+```
 import React, { useState } from 'react';
 import { Tag, Plus, Trash2 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
+import { Badge } from '../../components/ui/Badge';
+import { API_BASE_URL } from '../../lib/api';
 
-export const AdminCategories: React.FC = () => {
+export default function AdminCategories() {
     const { categories, setCategories } = useAdmin();
     const [newCategory, setNewCategory] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -10,9 +13,9 @@ export const AdminCategories: React.FC = () => {
     const handleCreate = async () => {
         if (!newCategory.trim()) return;
         try {
-            const res = await fetch('/api/admin/categories', {
+            const res = await fetch(`${ API_BASE_URL } /api/admin / categories`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer admin-secret-token` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer admin - secret - token` },
                 body: JSON.stringify({ label: newCategory })
             });
             if (res.ok) {
@@ -31,9 +34,9 @@ export const AdminCategories: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (!confirm('Excluir categoria?')) return;
         try {
-            const res = await fetch(`/api/admin/categories/${id}`, {
+            const res = await fetch(`${ API_BASE_URL } /api/admin / categories / ${ id } `, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer admin-secret-token` }
+                headers: { Authorization: `Bearer admin - secret - token` }
             });
             if (res.ok) {
                 setCategories(prev => prev.filter(c => c.id !== id));
