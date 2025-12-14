@@ -193,7 +193,7 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Location Selector */}
-            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4 relative z-20">
+            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4 relative z-50">
                 <CitySearch />
             </div>
 

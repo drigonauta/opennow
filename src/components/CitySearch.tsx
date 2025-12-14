@@ -59,58 +59,94 @@ export const CitySearch: React.FC = () => {
         }
     };
 
+    // Helper to get state abbreviation
+    const getStateAbbreviation = (fullStateName: string): string | null => {
+        const map: Record<string, string> = {
+            'acre': 'AC', 'alagoas': 'AL', 'amapá': 'AP', 'amazonas': 'AM', 'bahia': 'BA', 'ceará': 'CE',
+            'distrito federal': 'DF', 'espírito santo': 'ES', 'goiás': 'GO', 'maranhão': 'MA', 'mato grosso': 'MT',
+            'mato grosso do sul': 'MS', 'minas gerais': 'MG', 'pará': 'PA', 'paraíba': 'PB', 'paraná': 'PR',
+            'pernambuco': 'PE', 'piauí': 'PI', 'rio de janeiro': 'RJ', 'rio grande do norte': 'RN',
+            'rio grande do sul': 'RS', 'rondônia': 'RO', 'roraima': 'RR', 'santa catarina': 'SC',
+            'são paulo': 'SP', 'sergipe': 'SE', 'tocantins': 'TO',
+            'state of são paulo': 'SP', 'state of rio de janeiro': 'RJ', // Common Google variations
+            'state of minas gerais': 'MG'
+        };
+        const lowerName = fullStateName.toLowerCase().trim();
+        return map[lowerName] || null;
+    };
+
     const handleSelectSuggestion = (prediction: any) => {
-        // Prediction description format: "Uberaba - MG, Brasil"
+        // Prediction description format: "Uberaba - MG, Brasil" or "Bauru, State of São Paulo, Brazil"
         const text = prediction.description;
         setInputValue(text);
         setShowSuggestions(false);
 
         // Extract City and State
-        // Format usually: "City - State, Country" or "City, State, Country"
-        const parts = text.split('-').map((p: string) => p.trim());
+        const parts = text.split(',').map((p: string) => p.trim());
 
-        let city = parts[0];
-        let state = currentState;
-
-        // Try to find state in the second part (e.g. "MG, Brasil")
-        if (parts.length > 1) {
-            const statePart = parts[1].split(',')[0].trim(); // Get "MG" from "MG, Brasil"
-            if (statePart.length === 2) {
-                state = statePart;
-            }
-        } else {
-            // Fallback for comma separation: "Uberaba, MG, Brasil"
-            const commaParts = text.split(',').map((p: string) => p.trim());
-            if (commaParts.length > 1) {
-                city = commaParts[0];
-                const potentialState = commaParts[1];
-                if (potentialState.length === 2) state = potentialState;
+        // Strategy 1: Look for "City - State" pattern in first part
+        // Often Google returns "Uberaba - MG" as the first component
+        if (parts[0].includes('-')) {
+            const subParts = parts[0].split('-').map((p: string) => p.trim());
+            if (subParts.length >= 2) {
+                const potentialState = subParts[subParts.length - 1]; // Last part of split
+                if (potentialState.length === 2) {
+                    console.log(`📍 Parsed from hyphen: ${subParts[0]}, ${potentialState}`);
+                    setLocation(potentialState, subParts[0]);
+                    return;
+                }
             }
         }
 
-        console.log(`📍 Selected: ${city}, ${state}`);
-        setLocation(state, city);
+        // Strategy 2: Look for State in 2nd or 3rd position
+        let city = parts[0];
+        let stateCode = currentState; // Default fallback (try to avoid using this if possible)
+        let foundState = false;
+
+        for (let i = 1; i < parts.length; i++) {
+            const part = parts[i];
+
+            // Is it a 2-letter code?
+            if (part.length === 2 && part === part.toUpperCase()) {
+                stateCode = part;
+                foundState = true;
+                break;
+            }
+
+            // Is it a full state name?
+            const mapped = getStateAbbreviation(part);
+            if (mapped) {
+                stateCode = mapped;
+                foundState = true;
+                break;
+            }
+        }
+
+        console.log(`📍 Selected: ${city}, ${stateCode} (Found in text? ${foundState})`);
+        setLocation(stateCode, city);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            setShowSuggestions(false);
-            // Parse input to separate City and State if possible
-            const parts = inputValue.split(',').map(p => p.trim());
-            const newCity = parts[0];
-            let newState = currentState;
-
-            if (parts.length > 1) {
-                const statePart = parts[1].toUpperCase();
-                if (statePart.length === 2) {
-                    newState = statePart;
-                }
-            }
-
-            if (newCity) {
-                setLocation(newState, newCity);
+            // Prevent manual submission if no suggestion is selected
+            if (suggestions.length > 0) {
+                // Select the first suggestion automatically
+                handleSelectSuggestion(suggestions[0]);
+            } else {
+                console.log("Input blocked: User must select a city from the list.");
             }
         }
+    };
+
+    // Helper to clear invalid input on blur
+    const handleBlur = () => {
+        // Delay to allow click event on suggestion to fire first
+        setTimeout(() => {
+            const currentDisplay = currentCity && currentState ? `${currentCity}, ${currentState}` : currentCity || '';
+            if (inputValue !== currentDisplay) {
+                setInputValue(currentDisplay); // Revert to last valid city
+            }
+        }, 200);
     };
 
     const handleGPS = async () => {
@@ -128,6 +164,7 @@ export const CitySearch: React.FC = () => {
                     value={inputValue}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
                     onFocus={() => {
                         if (suggestions.length > 0) setShowSuggestions(true);
                     }}

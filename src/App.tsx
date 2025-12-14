@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { APILoader } from '@googlemaps/extended-component-library/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { BusinessProvider } from './context/BusinessContext';
 import { AuthProvider } from './context/AuthContext';
@@ -67,7 +66,6 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <APILoader apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} solutionChannel="GMP_GE_mapsandplacesautocomplete_v2" />
       <LocationProvider>
         <BusinessProvider>
           <FavoritesProvider>

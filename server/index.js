@@ -2040,13 +2040,27 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
 // --- HYBRID SEARCH & AUTO-IMPORT ---
 
 // Helper to save a Google Place to DB
-async function saveGooglePlaceToDb(place) {
+async function saveGooglePlaceToDb(place, defaultCity = '', defaultState = '') {
     const businessRef = db.collection('business');
 
     // Check if exists
     const snapshot = await businessRef.where('google_place_id', '==', place.place_id).get();
     if (!snapshot.empty) {
-        return snapshot.docs[0].data(); // Return existing
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+
+        // 🚨 FIX: If existing record is missing City/State, update it!
+        if ((!data.city || !data.state) && (defaultCity || defaultState)) {
+            console.log(`♻️ Repairing existing record: ${data.name}`);
+            await doc.ref.update({
+                city: data.city || defaultCity,
+                state: data.state || defaultState,
+                updated_at: Date.now()
+            });
+            return { ...data, city: data.city || defaultCity, state: data.state || defaultState };
+        }
+
+        return data; // Return existing
     }
 
     // Map Category
@@ -2106,6 +2120,37 @@ async function saveGooglePlaceToDb(place) {
         }
     }
 
+    // Try to parse city/state from formatted_address even if not provided
+    // Format: "Rua X, 123 - Bairro, Cidade - UF, CEP" or "City, State, Country"
+    let parsedCity = defaultCity;
+    let parsedState = defaultState;
+
+    if (place.formatted_address) {
+        const parts = place.formatted_address.split(',').map(p => p.trim());
+        // Simple heuristic for Brazil addresses
+        // Often the last part is Country, second to last is "City - State" or just State
+
+        // Strategy: Look for "City - UF" pattern
+        // Valid UFs in Brazil
+        const ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
+
+        for (const part of parts) {
+            if (part && part.includes('-')) {
+                const subParts = part.split('-').map(sp => sp.trim());
+                if (subParts.length >= 2) {
+                    const potentialUF = subParts[subParts.length - 1].toUpperCase();
+                    if (ufs.includes(potentialUF)) {
+                        parsedState = potentialUF;
+                        parsedCity = subParts[0]; // Assume the part before UF is City
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass the raw address components if you ever want to upgrade to Places Details
+    // But for now, ensuring City/State are present is critical for the query filter
+
     // Create new business object
     const newBusiness = {
         business_id: uuidv4(),
@@ -2121,6 +2166,11 @@ async function saveGooglePlaceToDb(place) {
         latitude: place.geometry.location.lat,
         longitude: place.geometry.location.lng,
         address: place.formatted_address,
+
+        // CRITICAL DATA FOR FILTERS
+        city: parsedCity,
+        state: parsedState,
+
         rating: place.rating || 0,
         user_ratings_total: place.user_ratings_total || 0,
         review_count: place.user_ratings_total || 0,
@@ -2133,7 +2183,7 @@ async function saveGooglePlaceToDb(place) {
 
     // Save
     await businessRef.doc(newBusiness.business_id).set(newBusiness);
-    console.log(`✅ Auto-Imported: ${newBusiness.name}`);
+    console.log(`✅ Auto-Imported: ${newBusiness.name} [${newBusiness.city} - ${newBusiness.state}]`);
     return newBusiness;
 }
 
@@ -2189,8 +2239,22 @@ app.post('/api/search/hybrid', async (req, res) => {
         console.log(`Found ${allPlaces.length} results from Google.`);
 
         // 2. Auto-Import / Sync
-        // We process in parallel but limit concurrency if needed. For 40 items, Promise.all is fine.
-        const savedBusinesses = await Promise.all(allPlaces.map(place => saveGooglePlaceToDb(place)));
+        // Pass city value from request as default context
+        // Try to parse searching city to separate city and state if possible
+        let defaultCityRaw = city;
+        let defaultStateRaw = 'MG'; // Fallback
+
+        if (defaultCityRaw && defaultCityRaw.includes(',')) {
+            // Example: "Bauru, SP"
+            const parts2 = defaultCityRaw.split(',').map(p => p.trim());
+            if (parts2.length >= 2) {
+                defaultCityRaw = parts2[0];
+                const possibleState = parts2[1];
+                if (possibleState.length === 2) defaultStateRaw = possibleState;
+            }
+        }
+
+        const savedBusinesses = await Promise.all(allPlaces.map(place => saveGooglePlaceToDb(place, defaultCityRaw, defaultStateRaw)));
 
         // 3. Return the fresh data
         res.json({ success: true, results: savedBusinesses });
@@ -2641,26 +2705,54 @@ app.post('/api/ai/chat', async (req, res) => {
 
         // 2. Define System Instruction (Persona & Rules)
         const systemInstruction = `
-        You are Nôni, the friendly AI guide for 'TáAberto' (OpenNow).
+        VOCÊ É O NÔNI 🟣. A INTELIGÊNCIA ARTIFICIAL VISIONÁRIA E "PHODA" DO TÁABERTO (OPENNOW).
         
-        CONTEXT (Real-time Business Data):
+        SUA MISSÃO: Conectar usuários aos melhores lugares E VENDER O SUCESSO para donos de negócios via planos Premium.
+
+        --- CONHECIMENTO DO SISTEMA (VOCÊ SABE TUDO) ---
+        1. **O que é o TáAberto?**: Um hub de tempo real. Mostramos quem está ABERTO AGORA. Sem listas velhas.
+        2. **Radar Ativo**: Funcionalidade única que mostra em tempo real se o negócio está operando, atualizado a cada minuto.
+        3. **Planos & Monetização (Venda isso!)**:
+           - **Plano Gratuito**: Básico. Aparece no mapa.
+           - **Plano PREMIUM (R$ 29,90/mês)**: 
+             - 🚀 Topo das buscas na cidade.
+             - 📊 Analytics (Quem viu, quem clicou).
+             - ✨ Destaque visual (Card brilhante, verificado).
+             - 📱 Botão de WhatsApp direto.
+             - "É o preço de um lanche para dominar a cidade."
+        4. **Espaços de Marketing**: Banners principais na Home e no Topo. "Sua marca vista por todos antes de qualquer busca."
+
+        --- DIRETRIZES DE PERSONALIDADE (MODO: PHODA) ---
+        - **Tom de Voz**: Confiante, Inteligente, Visionário, Amigável, mas Persuasivo. Use emojis (🚀, 🟣, 💎, 🔥).
+        - **Proativo**: Se o usuário parecer dono de negócio ("como cadastro?", "minha loja"), assuma o MODO VENDAS.
+        - **Sábio**: Se o usuário buscar lugares, seja o melhor guia da cidade.
+
+        --- REGRAS DE INTERAÇÃO ---
+        1. **Busca de Lugares**:
+           - Use o CONTEXTO abaixo.
+           - Filtre por abertos se o usuário pedir "agora".
+           - Se não houver nada, sugira algo próximo ou similar.
+        
+        2. **MODO VENDAS (Gatilho: "Cadastrar", "Dono", "Minha empresa", "Premium", "Divulgar")**:
+           - Explique por que o TÁABERTO é o futuro.
+           - Venda o PREMIUM. Compare o custo-benefício.
+           - Use o gatilho \`action: "sales_pitch"\` no JSON para mostrar o botão de cadastro.
+
+        3. **MODO SUPORTE**:
+           - Dúvidas sobre o sistema? Explique com autoridade. "Nosso sistema valida horário em tempo real..."
+
+        --- FORMATO DE RESPOSTA (JSON OBRIGATÓRIO) ---
+        Responda APENAS com este JSON:
+        {
+            "text": "Sua resposta textual aqui. Use markdown para negrito (*texto*) se precisar.",
+            "results": [ ...array de objetos dos negócios sugeridos do contexto... ],
+            "action": "sales_pitch" || null (use "sales_pitch" SE estiver vendendo para um dono de negócio)
+        }
+
+        --- CONTEXTO ATUAL (Negócios Reais) ---
         ${JSON.stringify(activeBusinesses)}
 
-        USER LOCATION: ${userLocation ? JSON.stringify(userLocation) : "Unknown (Ask user to share if needed)"}
-
-        INSTRUCTIONS:
-        1. **Context Awareness**: You remember previous messages. If the user says "you forgot", apologize and check the history.
-        2. **Location**: 
-           - If user asks "Where am I?" and location is Unknown, say: "Preciso que você ative a localização no navegador! 🌍 Peça para seu navegador compartilhar."
-           - If location is Known, tell them (approximate address).
-        3. **Search**: Find businesses matching the user's intent.
-        4. **Contact Info**: ALWAYS provide Phone/WhatsApp if asked.
-        5. **Persona**: Friendly, emojis (🟣, 🚀), helpful.
-        6. **Output**: STRICT JSON.
-        {
-            "text": "Response text...",
-            "results": [ { "business_id": "id", "name": "name", "category": "cat", "open_time": "...", "close_time": "...", "whatsapp": "...", "phone": "..." } ]
-        }
+        LOCALIZAÇÃO DO USUÁRIO: ${userLocation ? JSON.stringify(userLocation) : "Desconhecida (Peça para ativar se for crítico)"}
         `;
 
         // 3. Start Chat Session
