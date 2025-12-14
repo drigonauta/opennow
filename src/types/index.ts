@@ -36,6 +36,8 @@ export interface Business {
         whatsapp_clicks?: number;
         call_clicks?: number;
         appearances: number;
+        likes?: number;
+        dislikes?: number;
     };
     created_at: number;
     updated_at: number;

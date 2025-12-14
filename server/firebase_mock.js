@@ -13,7 +13,7 @@ const db = new Low(adapter, { business: [], subscriptions: [], transactions: [] 
 
 // Ensure defaults
 await db.read();
-db.data ||= { business: [], subscriptions: [], transactions: [] };
+db.data ||= { business: [], subscriptions: [], transactions: [], votes: [] };
 await db.write();
 
 const ID_FIELDS = {
@@ -183,5 +183,18 @@ class DocumentReference {
 }
 
 export const mockDb = {
-    collection: (name) => new CollectionReference(name)
+    collection: (name) => new CollectionReference(name),
+    batch: () => {
+        const operations = [];
+        return {
+            set: (ref, data) => operations.push(() => ref.set(data)),
+            update: (ref, data) => operations.push(() => ref.update(data)),
+            delete: (ref) => operations.push(() => ref.delete()),
+            commit: async () => {
+                for (const op of operations) {
+                    await op();
+                }
+            }
+        };
+    }
 };

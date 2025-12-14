@@ -17,11 +17,22 @@ export default function AdminLogin() {
         try {
             // reCAPTCHA Removed per user request
 
-            const res = await fetch('/api/admin/login', {
+            // Use relative URL for local development (proxy) or production same-domain
+            const API_URL = ''; // Was 'https://opennow-...'
+            console.log("AdminLogin V3: Fetching from relative path");
+
+            const res = await fetch(`${API_URL}/api/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'omit',
                 body: JSON.stringify({ email, password })
             });
+
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text();
+                throw new Error(`Resposta inválida do servidor (HTML/Text): ${text.substring(0, 100)}`);
+            }
 
             const data = await res.json();
 

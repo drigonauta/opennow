@@ -35,7 +35,11 @@ import { AdminLeads } from './pages/admin/AdminLeads';
 import { AdminCategories } from './pages/admin/AdminCategories';
 import AdminLogin from './pages/admin/AdminLogin'; // Import Login
 import { AdminImport } from './pages/AdminImport';
+import { AdminVotes } from './pages/admin/AdminVotes';
+import { AdminReviews } from './pages/admin/AdminReviews';
 import { GoogleMapDemo } from './pages/GoogleMapDemo';
+import { Terms } from './pages/Terms';
+import { About } from './pages/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { RequireLeadAuth } from './components/RequireLeadAuth';
 import RequireAdminAuth from './components/RequireAdminAuth'; // Import Auth Wrapper
@@ -109,12 +113,15 @@ const App: React.FC = () => {
                         <Route index element={<AdminOverview />} />
                         <Route path="businesses" element={<AdminBusinesses />} />
                         <Route path="approvals" element={<AdminApprovals />} />
-                        <Route path="locations" element={<AdminLocations />} />
+                        <Route path="reviews" element={<AdminReviews />} />
+                        <Route path="votes" element={<AdminVotes />} />
                         <Route path="leads" element={<AdminLeads />} />
                         <Route path="categories" element={<AdminCategories />} />
                         <Route path="import" element={<AdminImport />} />
                       </Route>
                       <Route path="/google-map" element={<GoogleMapDemo />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/about" element={<About />} />
                     </Routes>
                   </AdsProvider>
 

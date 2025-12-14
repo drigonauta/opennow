@@ -35,11 +35,37 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Fixed: Missing definition caused crash
 
 // Middleware
-app.use(cors());
-app.get('/api/health', (req, res) => res.send('OK'));
+app.use(cors({
+    origin: [
+        'https://taaberto.com.br',
+        'https://www.taaberto.com.br',
+        'https://opennow-282091951030.us-central1.run.app',
+        'http://localhost:5173',
+        'http://localhost:4173'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
+
+// app.options('*', cors()); // Enable pre-flight for all routes explicitly (Disabled due to path-to-regexp issue)
+
+// Force CSP Header
+app.use((req, res, next) => {
+    res.setHeader(
+        "Content-Security-Policy",
+        "default-src 'self' data: blob: https: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://opennow-282091951030.us-central1.run.app https: wss:; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:;"
+    );
+    next();
+});
+
+app.use(express.json());
+app.get('/health', (req, res) => res.status(200).json({ ok: true })); // Root health check
+app.get('/api/health', (req, res) => res.status(200).json({ ok: true })); // API health check
 app.use(bodyParser.json());
 
 // Configure Multer (Memory Storage)
@@ -1121,19 +1147,16 @@ const authenticateAdmin = (req, res, next) => {
         return next();
     }
 
-    // 2. Alternatively, check if it's a valid ID Token with admin claims (if implemented)
-    // For now, we strictly enforce the secret token for /api/admin routes as per design.
-    // If we wanted to allow authenticated users with a specific email to be admins:
-    /*
+    // 2. Verified JWT Check (Correctly handled Async)
     jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) {
+            console.error("Admin Auth Failed:", err.message);
+            return res.sendStatus(403);
+        }
         if (user.role !== 'admin') return res.sendStatus(403);
         req.user = user;
         next();
     });
-    */
-
-    return res.sendStatus(403); // Forbidden
 };
 
 // Admin Login Route
@@ -1562,65 +1585,10 @@ app.post('/api/admin/sync', authenticateAdmin, async (req, res) => {
 // 3.2 Admin: Cleanup Incomplete Data (e.g. Missing Location)
 app.delete('/api/admin/maintenance/incomplete', authenticateAdmin, async (req, res) => {
     try {
+        // Correct Batching Logic
         const snapshot = await db.collection('business').get();
         let deletedCount = 0;
-        const batch = db.batch();
-        const MAX_BATCH_SIZE = 400; // Firestore limit is 500
-        let currentBatchSize = 0;
-
-        // 3.3 Owner: Update Business Status (Open/Closed/Auto)
-        app.post('/api/business/:id/status', authenticateToken, async (req, res) => {
-            const { id } = req.params;
-            const { status } = req.body; // 'open', 'closed', or null (auto)
-
-            if (!['open', 'closed', null].includes(status)) {
-                return res.status(400).json({ error: 'Invalid status' });
-            }
-
-            try {
-                const businessRef = db.collection('business').doc(id);
-                const doc = await businessRef.get();
-
-                if (!doc.exists) {
-                    return res.status(404).json({ error: 'Business not found' });
-                }
-
-                // MVP: Owner check skipped or trusted via client for now as per auth middleware limitation
-                // In prod: verify req.user.uid === doc.data().owner_id
-
-                await businessRef.update({
-                    forced_status: status,
-                    updated_at: Date.now()
-                });
-
-                const updatedBusiness = { ...doc.data(), forced_status: status };
-
-                // Broadcast
-                broadcast({ type: 'BUSINESS_UPDATED', payload: { id, forced_status: status } });
-
-                res.json({ success: true, status });
-            } catch (error) {
-                console.error('Status Update Error:', error);
-                res.status(500).json({ error: 'Internal server error' });
-            }
-        });
-
-
-        // Helper to commit and reset batch
-        const commitBatch = async () => {
-            if (currentBatchSize > 0) {
-                batches.push(batch.commit());
-                deletedCount += currentBatchSize;
-            }
-        };
-
-        // Note: This logic assumes most businesses are valid. If most are invalid, we need a better batching strategy.
-        // For simplicity, we process just one batch or return count if > 500
-
-        // Actually, let's just do it simply. Iterate and delete individually if batch is complex,
-        // or actually use correct batching.
-
-        let batchOp = db.batch();
+        let batch = db.batch();
         let ops = 0;
 
         for (const doc of snapshot.docs) {
@@ -1629,19 +1597,19 @@ app.delete('/api/admin/maintenance/incomplete', authenticateAdmin, async (req, r
             const isInvalid = !data.city || !data.state || data.city.trim() === '' || data.state.trim() === '';
 
             if (isInvalid) {
-                batchOp.delete(doc.ref);
+                batch.delete(doc.ref);
                 ops++;
                 if (ops >= 400) {
-                    await batchOp.commit();
+                    await batch.commit();
                     deletedCount += ops;
-                    batchOp = db.batch();
+                    batch = db.batch();
                     ops = 0;
                 }
             }
         }
 
         if (ops > 0) {
-            await batchOp.commit();
+            await batch.commit();
             deletedCount += ops;
         }
 
@@ -1778,6 +1746,112 @@ app.post('/api/admin/reviews/moderate', authenticateAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Error moderating review' });
+    }
+});
+
+// --- VOTING ROUTES ---
+
+// 1. Vote on Business (Like/Dislike)
+app.post('/api/business/:id/vote', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const { type } = req.body; // 'like' | 'dislike'
+    const userId = req.user.uid;
+
+    if (!['like', 'dislike'].includes(type)) {
+        return res.status(400).json({ error: 'Invalid vote type' });
+    }
+
+    try {
+        const businessRef = db.collection('business').doc(id);
+        const businessDoc = await businessRef.get();
+        if (!businessDoc.exists) return res.status(404).json({ error: 'Business not found' });
+
+        // Check for existing vote
+        const voteQuery = await db.collection('votes')
+            .where('business_id', '==', id)
+            .where('user_id', '==', userId)
+            .limit(1)
+            .get();
+
+        let currentVote = null;
+        if (!voteQuery.empty) {
+            currentVote = voteQuery.docs[0];
+        }
+
+        const businessData = businessDoc.data();
+        let likes = (businessData.analytics && businessData.analytics.likes) || 0;
+        let dislikes = (businessData.analytics && businessData.analytics.dislikes) || 0;
+
+        // Transaction-like logic (using simple updates for mock/MVP)
+        if (currentVote) {
+            const voteData = currentVote.data();
+            if (voteData.type === type) {
+                // Toggle OFF (Remove vote)
+                await currentVote.ref.delete();
+                if (type === 'like') likes = Math.max(0, likes - 1);
+                else dislikes = Math.max(0, dislikes - 1);
+            } else {
+                // Change Vote (e.g. Like -> Dislike)
+                await currentVote.ref.update({ type, timestamp: Date.now() });
+                if (type === 'like') {
+                    likes++;
+                    dislikes = Math.max(0, dislikes - 1);
+                } else {
+                    dislikes++;
+                    likes = Math.max(0, likes - 1);
+                }
+            }
+        } else {
+            // New Vote
+            await db.collection('votes').add({
+                business_id: id,
+                user_id: userId,
+                type,
+                timestamp: Date.now()
+            });
+            if (type === 'like') likes++;
+            else dislikes++;
+        }
+
+        // Update Business Analytics
+        await businessRef.update({
+            'analytics.likes': likes,
+            'analytics.dislikes': dislikes,
+            updated_at: Date.now()
+        });
+
+        res.json({ success: true, likes, dislikes });
+
+    } catch (error) {
+        console.error('Voting Error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 2. Admin: Get Recent Votes
+app.get('/api/admin/interactions/votes', authenticateAdmin, async (req, res) => {
+    try {
+        const snapshot = await db.collection('votes').orderBy('timestamp', 'desc').limit(50).get();
+        const votes = [];
+
+        // Enrich with business name (basic loop for MVP, ideally join or map)
+        for (const doc of snapshot.docs) {
+            const vote = doc.data();
+            // Fetch business name for context
+            // Optimization: In real app, store businessName in vote doc
+            let businessName = 'Desconhecido';
+            try {
+                const bDoc = await db.collection('business').doc(vote.business_id).get();
+                if (bDoc.exists) businessName = bDoc.data().name;
+            } catch (e) { }
+
+            votes.push({ ...vote, businessName });
+        }
+
+        res.json(votes);
+    } catch (error) {
+        console.error('Admin Votes Error:', error);
+        res.status(500).json({ error: 'Failed to fetch votes' });
     }
 });
 
@@ -2223,8 +2297,8 @@ app.post('/api/admin/google/search', authenticateAdmin, async (req, res) => {
 
 // 2. Import Selected Businesses
 app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
-    const { businesses, requirePhone } = req.body; // Array of selected businesses and flag
-    console.log('Import request received for:', businesses?.length, 'businesses. Require Phone:', requirePhone);
+    const { businesses, requirePhone, defaultCity } = req.body; // Array of selected businesses and flag
+    console.log('Import request received for:', businesses?.length, 'businesses. Require Phone:', requirePhone, 'Default City:', defaultCity);
 
     if (!businesses || !Array.isArray(businesses)) {
         return res.status(400).json({ error: 'Invalid businesses data' });
@@ -2291,7 +2365,7 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
             }
 
             // Fallback for City/State if not found in components (using basic address split)
-            if (!city || !state) {
+            if (!city) {
                 if (place.address) {
                     const parts = place.address.split(',').map(p => p.trim());
                     if (parts.length >= 3) {
@@ -2299,12 +2373,18 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
                         if (cityStatePart && cityStatePart.includes('-')) {
                             const csParts = cityStatePart.split('-');
                             if (csParts.length >= 2) {
-                                if (!city) city = csParts[0].trim();
+                                city = csParts[0].trim();
                                 if (!state) state = csParts[1].trim();
                             }
                         }
                     }
                 }
+            }
+
+            // ULTIMATE FALLBACK: Use defaultCity from frontend
+            if (!city && defaultCity) {
+                console.log(`Using default city '${defaultCity}' for ${place.name}`);
+                city = defaultCity;
             }
 
             // Phone / WhatsApp
@@ -2696,7 +2776,7 @@ app.use((req, res) => {
 
 // Only listen if not in Vercel (Vercel handles the server)
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
     });
 }

@@ -86,12 +86,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    // Hardcoded API URL for Production reliability
+    const API_URL = 'https://opennow-282091951030.us-central1.run.app';
+
     // 2.2 Function Definitions (Defined before use)
     const handleSync = async () => {
         setIsSyncing(true);
         try {
             const token = localStorage.getItem('admin_token');
-            const res = await fetch('/api/admin/sync', {
+            console.log("AdminContext V1: Syncing with", API_URL);
+            const res = await fetch(`${API_URL}/api/admin/sync`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -113,15 +117,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
             // Auth Bypass: Use existing or default secret
             const token = localStorage.getItem('admin_token') || 'admin-secret-token';
+            console.log("AdminContext V1: Fetching data from", API_URL);
 
             // Cache busting
             const t = Date.now();
 
             const [statsRes, businessRes, leadsRes, categoriesRes] = await Promise.all([
-                fetch(`/api/admin/stats?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/admin/businesses?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/admin/leads?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(`/api/categories?_t=${t}`)
+                fetch(`${API_URL}/api/admin/stats?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_URL}/api/admin/businesses?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_URL}/api/admin/leads?_t=${t}`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_URL}/api/categories?_t=${t}`)
             ]);
 
             if (statsRes.ok) setStats(await statsRes.json());

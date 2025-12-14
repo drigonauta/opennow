@@ -145,7 +145,8 @@ export const AdminImport: React.FC = () => {
                 },
                 body: JSON.stringify({
                     businesses: selectedBusinesses,
-                    requirePhone // Pass the flag
+                    requirePhone, // Pass the flag
+                    defaultCity: city // Pass the searched city as fallback
                 })
             });
 

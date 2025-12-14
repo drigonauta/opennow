@@ -34,5 +34,33 @@ export const AnalyticsService = {
             console.error('Error logging analytics event:', error);
             // Fail silently to not disrupt user experience
         }
+    },
+
+    async vote(businessId: string, type: 'like' | 'dislike', token?: string) {
+        if (!token) {
+            console.error("Vote requires authentication");
+            throw new Error("Login required");
+        }
+
+        try {
+            const response = await fetch(`/api/business/${businessId}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ type })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to vote');
+            }
+
+            return await response.json(); // { success: true, likes, dislikes }
+        } catch (error) {
+            console.error('Error logging preference:', error);
+            throw error;
+        }
     }
 };

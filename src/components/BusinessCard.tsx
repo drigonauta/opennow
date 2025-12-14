@@ -58,7 +58,16 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                 </div>
             )}
 
-            <div className="flex justify-between items-start mb-2">
+            {/* Plantão Badge for Open Pharmacies */}
+            {(business.category === 'Farmácia' || business.category === 'Saúde') && isOpen && (
+                <div className="absolute -top-3 -right-3 z-10">
+                    <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg shadow-md uppercase tracking-wider transform rotate-3">
+                        PLANTÃO
+                    </span>
+                </div>
+            )}
+
+            <div className="flex justify-between items-start mb-2 relative">
                 <div>
                     <h3 className="font-bold text-lg text-gray-900 flex items-center gap-1">
                         {business.name}
@@ -86,52 +95,54 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
 
             <div className="space-y-1.5 text-sm text-gray-500">
                 <div className="flex items-center text-gray-500 text-sm">
-                    <Clock className="w-4 h-4 mr-2" />
+                    <Clock className="w-4 h-4 mr-2 text-gray-400" />
                     <span>{business.open_time} - {business.close_time}</span>
                 </div>
                 <div className="flex items-center text-gray-500 text-sm">
                     <MapPin className="w-4 h-4 mr-2" />
-                    <span className="truncate">{business.city || 'Uberaba'}, {business.state || 'MG'} {distance && `• ${distance}`}</span>
+                    <span className="truncate">{business.city || 'Uberaba'}, {business.state || 'MG'}</span>
                 </div>
             </div>
 
-            <div className="mt-4 flex gap-2">
+            {/* Main Action Buttons Row */}
+            <div className="mt-4 flex gap-2 items-center">
                 {whatsappLink ? (
                     <a
                         href={whatsappLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-[#39FF14] text-black py-3 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(57,255,20,0.4)] hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-105 transition-all duration-300 transform"
+                        className="flex-1 bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all"
                         onClick={(e) => {
                             e.stopPropagation();
                             AnalyticsService.logEvent('whatsapp', business.business_id, user?.uid);
                         }}
                     >
-                        <Phone size={16} />
+                        <Phone size={18} />
                         WhatsApp
                     </a>
                 ) : (
                     <button
-                        className="flex-1 bg-gray-100 text-gray-400 py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 cursor-not-allowed"
+                        className="flex-1 bg-gray-100 text-gray-400 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 cursor-not-allowed"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                         }}
                         title="WhatsApp não disponível"
                     >
-                        <Phone size={16} />
+                        <Phone size={18} />
                         WhatsApp
                     </button>
                 )}
+
                 <button
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         toggleFavorite(business.business_id);
                     }}
-                    className={`p-2 rounded-lg border transition-colors ${isFavorite(business.business_id)
-                        ? 'bg-red-500/10 border-red-500 text-red-500'
-                        : 'bg-transparent border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500'
+                    className={`p-3 rounded-xl border transition-colors ${isFavorite(business.business_id)
+                        ? 'bg-red-50 border-red-200 text-red-500'
+                        : 'bg-white border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500'
                         }`}
                 >
                     <Heart size={20} fill={isFavorite(business.business_id) ? "currentColor" : "none"} />
@@ -147,19 +158,100 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                             window.location.href = `tel:${business.phone || business.whatsapp}`;
                         }
                     }}
-                    className="flex-1 bg-[#39FF14] text-blue-700 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 hover:scale-105 transition-all duration-300 transform"
+                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all"
                     title="Ligar Agora"
                 >
-                    <Phone size={16} />
+                    <Phone size={18} />
                     Ligar
                 </button>
             </div>
 
-            {/* Google Rating */}
+            {/* Like/Dislike Row */}
+            <div className="mt-3 flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                    {/* Like Button */}
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!user) {
+                                alert("Você precisa estar logado para votar!");
+                                return;
+                            }
+                            try {
+                                const token = await user.getIdToken();
+                                const res = await AnalyticsService.vote(business.business_id, 'like', token);
+                                // Optimistic update could be better, but we rely on prop update or local state if we want instant feedback
+                                // For now, simple alert or let socket update if real-time
+                                // Ideally we update local business object or trigger refresh
+                                if (res.success) {
+                                    // Update counts visually (simple implementation)
+                                    business.analytics = { ...business.analytics, likes: res.likes, dislikes: res.dislikes } as any;
+                                }
+                            } catch (err) {
+                                alert("Erro ao votar. Tente novamente.");
+                            }
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                        title="Curti"
+                    >
+                        <div className="text-sm">👍</div>
+                        <span className="font-bold text-xs">{business.analytics?.likes || 0}</span>
+                    </button>
+
+                    {/* Dislike Button */}
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!user) {
+                                alert("Você precisa estar logado para votar!");
+                                return;
+                            }
+                            try {
+                                const token = await user.getIdToken();
+                                const res = await AnalyticsService.vote(business.business_id, 'dislike', token);
+                                if (res.success) {
+                                    business.analytics = { ...business.analytics, likes: res.likes, dislikes: res.dislikes } as any;
+                                }
+                            } catch (err) {
+                                alert("Erro ao votar. Tente novamente.");
+                            }
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm"
+                        title="Não Curti"
+                    >
+                        <div className="text-sm transform scale-x-[-1]">👎</div>
+                        <span className="font-bold text-xs">{business.analytics?.dislikes || 0}</span>
+                    </button>
+                </div>
+
+                <div className="flex-1"></div>
+
+                {/* Botão Ir (Directions) - Moved here per request */}
+                <div className="flex items-center gap-2">
+                    {distance && <span className="text-xs font-medium text-gray-500">{distance} de mim</span>}
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const query = encodeURIComponent(`${business.name} ${business.address || ''} ${business.city || 'Uberaba'} ${business.state || 'MG'}`);
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${query}`, '_blank');
+                        }}
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 transition-colors border border-blue-200 shadow-sm"
+                        title="Rota até aqui"
+                    >
+                        Ir
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>
+                    </button>
+                </div>
+            </div>
+
+            {/* Google Rating & Claims */}
             {(business.rating !== undefined && business.rating !== null) && (
-                <div className="mt-3 pt-3 border-t border-gray-800 flex justify-between items-center">
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
                     <div
-                        className="flex items-center gap-1.5 cursor-pointer hover:bg-white/5 -mx-2 px-2 py-1 rounded transition-colors"
+                        className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -172,14 +264,14 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         }}
                         title="Ver avaliações no Google Maps"
                     >
-                        <div className="flex text-yellow-500">
+                        <div className="flex text-yellow-400">
                             <Star size={14} fill="currentColor" />
                         </div>
-                        <span className="text-sm font-bold text-white">{business.rating}</span>
-                        <span className="text-xs text-gray-500">({business.review_count || business.user_ratings_total || 0})</span>
+                        <span className="text-sm font-bold text-gray-700">{business.rating}</span>
+                        <span className="text-xs text-gray-400">({business.review_count || business.user_ratings_total || 0})</span>
                     </div>
 
-                    {/* Claim Button */}
+                    {/* Claim Button - Prominent Style */}
                     {!business.owner_id || business.owner_id === 'admin_import' ? (
                         <button
                             onClick={(e) => {
@@ -187,10 +279,10 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                                 e.stopPropagation();
                                 setShowClaimModal(true);
                             }}
-                            className="text-xs font-medium text-ta-blue hover:text-white hover:bg-ta-blue/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                            className="bg-white border border-green-500 text-green-600 hover:bg-green-50 px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1"
                         >
-                            <ShieldCheck size={12} />
-                            Reivindicar
+                            <ShieldCheck size={14} />
+                            Reivindicar aqui
                         </button>
                     ) : null}
                 </div>

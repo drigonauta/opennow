@@ -15,7 +15,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onSearch 
             </div>
             <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-800 rounded-xl leading-5 bg-ta-card/50 backdrop-blur-md text-white autofill-dark placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-ta-blue/50 focus:border-ta-blue/50 transition-all shadow-inner"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-800 rounded-xl leading-5 bg-ta-card/50 backdrop-blur-md text-gray-900 autofill-dark placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-ta-blue/50 focus:border-ta-blue/50 transition-all shadow-inner"
                 placeholder="Buscar por nome ou categoria..."
                 value={value}
                 onChange={(e) => onChange(e.target.value)}

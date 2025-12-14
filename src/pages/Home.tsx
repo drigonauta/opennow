@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Fuse from 'fuse.js';
 import { Link } from 'react-router-dom';
+import { Clock } from 'lucide-react';
 import { useBusiness } from '../context/BusinessContext';
 import { useLocation } from '../context/LocationContext';
 import { BusinessCard } from '../components/BusinessCard';
@@ -12,6 +13,7 @@ import { CityStatsBadge } from '../components/CityStatsBadge';
 import { UserStatusBadge } from '../components/UserStatusBadge';
 
 
+import { Footer } from '../components/Footer';
 import { AdBanner } from '../components/AdBanner'; // Import AdBanner
 
 export const Home: React.FC = () => {
@@ -19,7 +21,13 @@ export const Home: React.FC = () => {
     const { currentCity, userLocation } = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOpenOnly, setIsOpenOnly] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [currentPage, setCurrentPage] = useState(1);
 
+    // Reset page when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredBusinesses, searchQuery, isOpenOnly]);
     const isBusinessOpen = (business: any) => {
         if (business.forced_status === 'open') return true;
         if (business.forced_status === 'closed') return false;
@@ -84,6 +92,12 @@ export const Home: React.FC = () => {
 
     // Businesses are already sorted by distance in Context if userLocation is available
     const businessesWithDistance = displayBusinesses;
+
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = businessesWithDistance.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(businessesWithDistance.length / itemsPerPage);
 
 
     // if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
@@ -201,6 +215,30 @@ export const Home: React.FC = () => {
                             </div>
                             <div className="flex items-center space-x-2">
                                 <button
+                                    onClick={() => {
+                                        // If already Near Me (distance sort), toggle off? Or just set it.
+                                        // The image shows it as a primary action.
+                                        // Let's set sort to distance and maybe clear city filter to "All"?
+                                        // Or just ensure we have user location.
+                                        if (!userLocation) {
+                                            alert("Precisamos da sua localização para mostrar empresas próximas.");
+                                            return;
+                                        }
+                                        setSortBy('distance');
+                                        setIsOpenOnly(false); // Optional: Reset other filters?
+                                        // Maybe scroll to list?
+                                        document.getElementById('business-list')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-md flex items-center gap-2 ${sortBy === 'distance'
+                                        ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <span className="text-red-500">📍</span>
+                                    Perto de Mim
+                                </button>
+
+                                <button
                                     onClick={() => setIsOpenOnly(!isOpenOnly)}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${isOpenOnly
                                         ? 'bg-ta-green/20 text-ta-green border-ta-green border shadow-neon-green'
@@ -248,6 +286,17 @@ export const Home: React.FC = () => {
                             }}
                         />
 
+                        {/* CTA: Missing Company */}
+                        <div className="flex justify-center">
+                            <Link
+                                to="/admin/import"
+                                className="text-xs font-bold text-gray-500 hover:text-ta-blue hover:underline transition-colors flex items-center gap-1 bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm"
+                            >
+                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                                Não viu sua empresa aqui? Clique aqui para adicionar
+                            </Link>
+                        </div>
+
                         <CategoryFilter
                             selected={selectedCategory}
                             onSelect={setSelectedCategory}
@@ -264,8 +313,71 @@ export const Home: React.FC = () => {
 
             {/* Business List */}
             <main id="business-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+                {/* On Duty Section (Farmácias de Plantão) */}
+                <div className="mb-10">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center animate-pulse">
+                            <Clock className="text-red-500" />
+                        </div>
+                        <h2 className="text-xl font-bold text-white">Farmácia de Plantão Hoje</h2>
+                    </div>
+                    {(() => {
+                        const pharmacies = businesses.filter(b =>
+                            (b.category === 'Farmácia' || b.category === 'Saúde') &&
+                            isBusinessOpen(b)
+                        ).sort((a, b) => (b.is_premium ? 1 : 0) - (a.is_premium ? 1 : 0)).slice(0, 3);
+
+                        if (pharmacies.length === 0) {
+                            return (
+                                <div className="bg-ta-card border border-gray-800 rounded-xl p-6 text-center text-gray-400">
+                                    Nenhuma farmácia registrada para plantão hoje.
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {pharmacies.map(business => (
+                                    <div key={business.business_id} className="relative">
+                                        <div className="absolute -top-3 -right-3 z-10 bg-red-600 text-white text-[10px] uppercase font-bold px-2 py-1 rounded shadow-lg animate-bounce">
+                                            Plantão
+                                        </div>
+                                        <BusinessCard
+                                            business={business}
+                                            distance={(business as any)._distance ? ((business as any)._distance < 1 ? `${Math.round((business as any)._distance * 1000)} m` : `${(business as any)._distance.toFixed(1)} km`) : undefined}
+                                            isOpen={true}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })()}
+                </div>
+
+                <div className="border-t border-gray-800 my-8"></div> {/* Divider */}
+
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-white">Descubra Mais</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-400">Exibir:</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(Number(e.target.value));
+                                setCurrentPage(1); // Reset to first page
+                            }}
+                            className="bg-ta-card border border-gray-700 text-white text-sm rounded-lg px-2 py-1 focus:ring-ta-blue focus:border-ta-blue"
+                        >
+                            <option value={12}>12</option>
+                            <option value={24}>24</option>
+                            <option value={48}>48</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {businessesWithDistance.map((business) => (
+                    {currentItems.map((business) => (
                         <BusinessCard
                             key={business.business_id}
                             business={business}
@@ -274,6 +386,31 @@ export const Home: React.FC = () => {
                         />
                     ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-8">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 rounded-lg bg-ta-card border border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
+                        >
+                            Anterior
+                        </button>
+
+                        <span className="text-gray-400 text-sm font-medium">
+                            Página {currentPage} de {totalPages}
+                        </span>
+
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                        >
+                            Próxima
+                        </button>
+                    </div>
+                )}
 
                 {businessesWithDistance.length === 0 && (
                     <div className="text-center py-12">
@@ -291,6 +428,8 @@ export const Home: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            <Footer />
         </div >
     );
 };

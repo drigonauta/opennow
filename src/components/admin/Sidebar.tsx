@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, CheckCircle, MapPin, Users, Tag, Settings, LogOut, Download } from 'lucide-react';
+import { LayoutDashboard, Building2, CheckCircle, MapPin, Users, Tag, Settings, LogOut, Download, MessageSquare, ThumbsUp } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
     const navItems = [
@@ -9,6 +9,8 @@ export const Sidebar: React.FC = () => {
         { path: '/admin/approvals', icon: CheckCircle, label: 'Aprovações' },
         { path: '/admin/locations', icon: MapPin, label: 'Locais' },
         { path: '/admin/leads', icon: Users, label: 'Leads' },
+        { path: '/admin/reviews', icon: MessageSquare, label: 'Avaliações' },
+        { path: '/admin/votes', icon: ThumbsUp, label: 'Auditoria Votos' },
         { path: '/admin/categories', icon: Tag, label: 'Categorias' },
         { path: '/admin/import', icon: Download, label: 'Importação' },
     ];
