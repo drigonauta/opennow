@@ -42,8 +42,13 @@ export const AnalyticsService = {
             throw new Error("Login required");
         }
 
+        // Use direct Cloud Run URL in production to avoid Vercel rewrite issues
+        const API_BASE_URL = import.meta.env.PROD
+            ? 'https://opennow-282091951030.us-central1.run.app'
+            : '';
+
         try {
-            const response = await fetch(`/api/business/${businessId}/vote`, {
+            const response = await fetch(`${API_BASE_URL}/api/business/${businessId}/vote`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
