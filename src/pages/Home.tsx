@@ -264,8 +264,16 @@ export const Home: React.FC = () => {
                             onChange={setSearchQuery}
                             onSearch={async (term) => {
                                 if (!term) return;
-                                // Call Hybrid Search
+
+                                // Provide visual feedback (optional: add a generic loading state in UI if possible, 
+                                // but specifically resetting filters is key)
+                                setSelectedCategory('All');
+                                setIsOpenOnly(false);
+
+                                // Call Hybrid Search for Auto-Import
                                 try {
+                                    // Maybe show a toast or global loading indicator here? 
+                                    // For now, reliance on optimistic behavior is fine, but clearing filters ensures visibility.
                                     const res = await fetch('/api/search/hybrid', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -277,7 +285,6 @@ export const Home: React.FC = () => {
                                         })
                                     });
                                     if (res.ok) {
-                                        // Refresh businesses from context to see new imports
                                         await refreshBusinesses();
                                     }
                                 } catch (e) {
