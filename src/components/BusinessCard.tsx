@@ -41,6 +41,46 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
         currentCity
     );
 
+    // Use local state for optimistic UI updates
+    const [stats, setStats] = useState({
+        likes: business.analytics?.likes || 0,
+        dislikes: business.analytics?.dislikes || 0
+    });
+
+    const handleVote = async (type: 'like' | 'dislike') => {
+        if (!user) {
+            alert("Você precisa estar logado para votar!");
+            return;
+        }
+
+        // Optimistic Update
+        const previousStats = { ...stats };
+        setStats(prev => {
+            return {
+                ...prev,
+                [type === 'like' ? 'likes' : 'dislikes']: prev[type === 'like' ? 'likes' : 'dislikes'] + 1
+            };
+        });
+
+        try {
+            const token = await user.getIdToken();
+            const res = await AnalyticsService.vote(business.business_id, type, token);
+
+            if (res.success) {
+                // Sync with server truth
+                setStats({ likes: res.likes, dislikes: res.dislikes });
+            } else {
+                // Revert on failure
+                setStats(previousStats);
+            }
+        } catch (err) {
+            console.error(err);
+            // Revert on error
+            setStats(previousStats);
+            alert("Erro ao votar. Tente novamente.");
+        }
+    };
+
     return (
         <Link to={`/business/${business.business_id}`} className={`
             block bg-white rounded-xl shadow-lg border p-4 mb-3 transition-all duration-500
