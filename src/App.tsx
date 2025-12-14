@@ -30,7 +30,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { AdminOverview } from './pages/admin/AdminOverview';
 import { AdminBusinesses } from './pages/admin/AdminBusinesses';
 import { AdminApprovals } from './pages/admin/AdminApprovals';
-import { AdminLocations } from './pages/admin/AdminLocations';
+// import { AdminLocations } from './pages/admin/AdminLocations';
 import { AdminLeads } from './pages/admin/AdminLeads';
 import { AdminCategories } from './pages/admin/AdminCategories';
 import AdminLogin from './pages/admin/AdminLogin'; // Import Login
