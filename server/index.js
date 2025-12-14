@@ -52,7 +52,9 @@ app.use(cors({
     credentials: true
 }));
 
-// app.options('*', cors()); // Enable pre-flight for all routes explicitly (Disabled due to path-to-regexp issue)
+// Enable pre-flight for all routes. 
+// Using regex /.*/ to avoid path-to-regexp issues with string '*' in some versions
+app.options(/.*/, cors());
 
 // Force CSP Header
 app.use((req, res, next) => {

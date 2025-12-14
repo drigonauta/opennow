@@ -174,29 +174,13 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (!user) {
-                                alert("Você precisa estar logado para votar!");
-                                return;
-                            }
-                            try {
-                                const token = await user.getIdToken();
-                                const res = await AnalyticsService.vote(business.business_id, 'like', token);
-                                // Optimistic update could be better, but we rely on prop update or local state if we want instant feedback
-                                // For now, simple alert or let socket update if real-time
-                                // Ideally we update local business object or trigger refresh
-                                if (res.success) {
-                                    // Update counts visually (simple implementation)
-                                    business.analytics = { ...business.analytics, likes: res.likes, dislikes: res.dislikes } as any;
-                                }
-                            } catch (err) {
-                                alert("Erro ao votar. Tente novamente.");
-                            }
+                            handleVote('like');
                         }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
                         title="Curti"
                     >
                         <div className="text-sm">👍</div>
-                        <span className="font-bold text-xs">{business.analytics?.likes || 0}</span>
+                        <span className="font-bold text-xs">{stats.likes}</span>
                     </button>
 
                     {/* Dislike Button */}
@@ -204,25 +188,13 @@ export const BusinessCard: React.FC<BusinessCardProps> = ({ business, isOpen: pr
                         onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (!user) {
-                                alert("Você precisa estar logado para votar!");
-                                return;
-                            }
-                            try {
-                                const token = await user.getIdToken();
-                                const res = await AnalyticsService.vote(business.business_id, 'dislike', token);
-                                if (res.success) {
-                                    business.analytics = { ...business.analytics, likes: res.likes, dislikes: res.dislikes } as any;
-                                }
-                            } catch (err) {
-                                alert("Erro ao votar. Tente novamente.");
-                            }
+                            handleVote('dislike');
                         }}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm"
                         title="Não Curti"
                     >
                         <div className="text-sm transform scale-x-[-1]">👎</div>
-                        <span className="font-bold text-xs">{business.analytics?.dislikes || 0}</span>
+                        <span className="font-bold text-xs">{stats.dislikes}</span>
                     </button>
                 </div>
 
