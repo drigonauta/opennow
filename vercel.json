@@ -16,6 +16,14 @@
             "destination": "https://opennow-282091951030.us-central1.run.app/api/$1"
         },
         {
+            "source": "/pastor.ia",
+            "destination": "https://biblia-pastoria-282091951030.us-central1.run.app/pastor.ia/"
+        },
+        {
+            "source": "/pastor.ia/(.*)",
+            "destination": "https://biblia-pastoria-282091951030.us-central1.run.app/pastor.ia/$1"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

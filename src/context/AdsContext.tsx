@@ -46,7 +46,10 @@ export const AdsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Initial Fetch
     useEffect(() => {
-        fetchAds();
+        const initAds = async () => {
+            await fetchAds();
+        };
+        initAds();
     }, []);
 
     // Rotation Logic

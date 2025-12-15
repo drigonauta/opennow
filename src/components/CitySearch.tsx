@@ -16,7 +16,7 @@ export const CitySearch: React.FC = () => {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setInputValue(newVal);
         }
-    }, [currentCity, currentState]);
+    }, [currentCity, currentState, inputValue]);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -99,7 +99,7 @@ export const CitySearch: React.FC = () => {
         }
 
         // Strategy 2: Look for State in 2nd or 3rd position
-        let city = parts[0];
+        const city = parts[0];
         let stateCode = currentState; // Default fallback (try to avoid using this if possible)
         let foundState = false;
 

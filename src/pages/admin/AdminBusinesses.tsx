@@ -114,7 +114,7 @@ export const AdminBusinesses: React.FC = () => {
                                 } else {
                                     alert('Erro ao limpar: ' + data.error);
                                 }
-                            } catch (e) {
+                            } catch {
                                 alert('Erro de conexão.');
                             }
                         }}

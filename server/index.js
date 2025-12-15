@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import multer from 'multer'; // Import Multer
 import { getStorage } from 'firebase-admin/storage'; // Import Admin Storage
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 // Dynamic DB Import based on Environment
 let db;
@@ -64,6 +65,18 @@ app.use((req, res, next) => {
     );
     next();
 });
+
+// Proxy for Pastor.IA (Cloud Run Service)
+// Express strips the mount path ('/pastor.ia'), so we must add it back for the target
+app.use('/pastor.ia', createProxyMiddleware({
+    target: 'https://biblia-pastoria-282091951030.us-central1.run.app',
+    changeOrigin: true,
+    secure: true,
+    ws: true,
+    pathRewrite: {
+        '^/': '/pastor.ia/'
+    }
+}));
 
 app.use(express.json());
 app.get('/health', (req, res) => res.status(200).json({ ok: true })); // Root health check
