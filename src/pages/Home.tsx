@@ -15,14 +15,21 @@ import { UserStatusBadge } from '../components/UserStatusBadge';
 
 import { Footer } from '../components/Footer';
 import { AdBanner } from '../components/AdBanner'; // Import AdBanner
+import { AdPurchaseModal } from '../components/AdPurchaseModal';
+import { useAds } from '../context/AdsContext';
 
 export const Home: React.FC = () => {
     const { businesses, filteredBusinesses, error, lastUpdated, sortBy, setSortBy, refreshBusinesses, selectedCategory, setSelectedCategory } = useBusiness();
+    const { activeAd } = useAds();
     const { currentCity, userLocation } = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOpenOnly, setIsOpenOnly] = useState(false);
     const [itemsPerPage, setItemsPerPage] = useState(12);
     const [currentPage, setCurrentPage] = useState(1);
+
+    // Ad System State
+    const [showAdModal, setShowAdModal] = useState(false);
+    const [adPreview, setAdPreview] = useState<string | null>(null);
 
     const [specificTime, setSpecificTime] = useState('');
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -168,20 +175,65 @@ export const Home: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center z-10">
 
                     {/* Left Side: Advertising Space */}
-                    <div
-                        onClick={() => document.getElementById('ad-banner-section')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-ta-blue/5 p-8 text-center hover:bg-ta-blue/10 transition-all group cursor-pointer backdrop-blur-sm flex flex-col items-center justify-center gap-4"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-br from-ta-blue/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {/* Left Side: Advertising Space */}
+                    {activeAd ? (
+                        <a
+                            href={activeAd.link || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-black h-64 md:h-80 w-full group cursor-pointer block shadow-[0_0_30px_rgba(0,0,0,0.5)] transform hover:scale-[1.02] transition-transform"
+                        >
+                            {/* Custom Neon Border matching AdBanner */}
+                            <div className="absolute -inset-1 rounded-xl z-20 pointer-events-none"
+                                style={{
+                                    boxShadow: `0 0 15px ${activeAd.neonColor || '#00ff00'}, 0 0 30px ${activeAd.neonColor || '#00ff00'}, inset 0 0 10px ${activeAd.neonColor || '#00ff00'}`,
+                                    border: `2px solid ${activeAd.neonColor || '#00ff00'}`,
+                                    opacity: 0.8,
+                                    animation: 'pulse-neon 2s infinite alternate'
+                                }}
+                            ></div>
+                            <style>{`
+                                @keyframes pulse-neon {
+                                    from { opacity: 0.7; box-shadow: 0 0 10px ${activeAd.neonColor || '#00ff00'}, 0 0 20px ${activeAd.neonColor || '#00ff00'}; }
+                                    to { opacity: 1; box-shadow: 0 0 25px ${activeAd.neonColor || '#00ff00'}, 0 0 40px ${activeAd.neonColor || '#00ff00'}; }
+                                }
+                            `}</style>
 
-                        <h3 className="text-3xl font-bold text-ta-blue">Sua Marca Aqui</h3>
-                        <p className="text-blue-200/80 max-w-xs">Alcance milhares de clientes em Uberaba com destaque na página inicial.</p>
+                            {activeAd.imageUrl ? (
+                                <img
+                                    src={activeAd.imageUrl}
+                                    alt="Advertisement"
+                                    className="w-full h-full object-cover opacity-90"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                    SEM IMAGEM
+                                </div>
+                            )}
 
-                        <div className="mt-2 inline-flex items-center gap-2 bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
-                            <span>Anuncie Conosco</span>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            {/* Patrocinado Badge */}
+                            <div className="absolute bottom-4 right-4 z-30">
+                                <span className="bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded border border-white/20 uppercase tracking-widest backdrop-blur-sm">
+                                    Patrocinado
+                                </span>
+                            </div>
+                        </a>
+                    ) : (
+                        <div
+                            onClick={() => setShowAdModal(true)}
+                            className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-ta-blue/5 p-8 text-center hover:bg-ta-blue/10 transition-all group cursor-pointer backdrop-blur-sm flex flex-col items-center justify-center gap-4 h-64 md:h-80"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-ta-blue/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                            <h3 className="text-3xl font-bold text-ta-blue">Sua Marca Aqui</h3>
+                            <p className="text-blue-200/80 max-w-xs">Alcance milhares de clientes em Uberaba com destaque na página inicial.</p>
+
+                            <div className="mt-2 inline-flex items-center gap-2 bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
+                                <span>Clique para Anunciar</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Right Side: User Focus CTA */}
                     <div className="text-center md:text-left space-y-8">
@@ -384,8 +436,16 @@ export const Home: React.FC = () => {
 
             {/* Ad Banner Section - Now outside sticky header so it scrolls under */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" id="ad-banner-section">
-                <AdBanner />
+                <AdBanner previewImage={adPreview} />
             </div>
+
+            {/* Modal for Ad Purchase */}
+            {showAdModal && (
+                <AdPurchaseModal
+                    onClose={() => setShowAdModal(false)}
+                    onPreviewImage={(url) => setAdPreview(url)}
+                />
+            )}
 
             {/* Map Preview Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
