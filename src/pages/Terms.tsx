@@ -1,13 +1,13 @@
-```javascript
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+
 
 export const Terms: React.FC = () => {
     return (
         <div className="min-h-screen bg-black text-white py-20 px-4">
             <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl font-bold mb-8">Termos de Uso e Política de Privacidade</h1>
-                
+
                 <div className="space-y-6 text-gray-300">
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-3">1. Aceitação dos Termos</h2>

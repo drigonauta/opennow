@@ -32,11 +32,16 @@ export const Footer: React.FC = () => {
                 <div>
                     <h4 className="text-white font-bold mb-2">Contato</h4>
                     <p className="text-gray-400 text-sm mb-1">Dúvidas ou Parcerias?</p>
-                    <a href="mailto:contato@taaberto.com.br" className="text-gray-400 hover:text-white transition-colors block mb-4">
+                    <a href="mailto:contato@taaberto.com.br" className="text-gray-400 hover:text-white transition-colors block mb-6">
                         contato@taaberto.com.br
                     </a>
 
-                    {/* Removed Openow Logo */}
+                    <div className="pt-4 border-t border-gray-800/50">
+                        <p className="text-[10px] text-gray-600 mb-2 uppercase tracking-widest font-bold">Powered by</p>
+                        <a href="https://www.openow.io" target="_blank" rel="noopener noreferrer" className="inline-block opacity-90 hover:opacity-100 transition-opacity">
+                            <img src="/logo-opennow-v2.png" alt="Openow.io" className="h-10 object-contain" />
+                        </a>
+                    </div>
                 </div>
 
             </div>

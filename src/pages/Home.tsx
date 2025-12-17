@@ -30,6 +30,23 @@ export const Home: React.FC = () => {
     // Ad System State
     const [showAdModal, setShowAdModal] = useState(false);
     const [adPreview, setAdPreview] = useState<string | null>(null);
+    const [isBannerSticky, setIsBannerSticky] = useState(false);
+    const bannerRef = React.useRef<HTMLDivElement>(null);
+
+    // Sticky Banner Detection
+    React.useEffect(() => {
+        const handleScroll = () => {
+            if (bannerRef.current) {
+                const rect = bannerRef.current.getBoundingClientRect();
+                // Check if the top of the banner is roughly at the offset (80px header approx)
+                // Using 85 to have a slight buffer for determining "stuck" state
+                setIsBannerSticky(rect.top <= 81);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const [specificTime, setSpecificTime] = useState('');
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -228,9 +245,12 @@ export const Home: React.FC = () => {
                             <h3 className="text-3xl font-bold text-ta-blue">Sua Marca Aqui</h3>
                             <p className="text-blue-200/80 max-w-xs">Alcance milhares de clientes em Uberaba com destaque na página inicial.</p>
 
-                            <div className="mt-2 inline-flex items-center gap-2 bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
-                                <span>Clique para Anunciar</span>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            <div className="mt-4 relative group/btn">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-ta-blue via-cyan-400 to-ta-blue rounded-full blur opacity-75 group-hover/btn:opacity-100 transition duration-1000 group-hover/btn:duration-200 animate-tilt"></div>
+                                <div className="relative inline-flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full text-base font-black border border-ta-blue/50 group-hover/btn:bg-ta-blue group-hover/btn:text-white transition-all shadow-[0_0_20px_rgba(0,123,255,0.5)] uppercase tracking-wider">
+                                    <span className="drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">Clique para Anunciar</span>
+                                    <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -327,7 +347,10 @@ export const Home: React.FC = () => {
                                         : 'bg-ta-card text-gray-400 border-gray-700 border hover:border-gray-500'
                                         }`}
                                 >
-                                    {isOpenOnly ? '🟢 Abertos Agora' : '⚪ Mostrar todos'}
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full transition-all duration-300 ${isOpenOnly ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gradient-to-br from-gray-200 to-gray-400 shadow-inner'}`} />
+                                        <span>{isOpenOnly ? 'Abertos Agora' : 'Mostrar Todos'}</span>
+                                    </div>
                                 </button>
 
                                 <select
@@ -434,9 +457,16 @@ export const Home: React.FC = () => {
                 </div>
             </div>
 
-            {/* Ad Banner Section - Now outside sticky header so it scrolls under */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" id="ad-banner-section">
-                <AdBanner previewImage={adPreview} />
+            {/* Ad Banner Section - Sticky on Scroll with Offset for Header */}
+            {/* Top-[76px] roughly matches standard header height + padding to avoid collision */}
+            <div
+                ref={bannerRef}
+                className="sticky top-[76px] z-[60] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 transition-all duration-300 pointer-events-none md:pointer-events-auto"
+                id="ad-banner-section"
+            >
+                <div className="pointer-events-auto">
+                    <AdBanner previewImage={adPreview} isSticky={isBannerSticky} />
+                </div>
             </div>
 
             {/* Modal for Ad Purchase */}
