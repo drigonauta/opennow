@@ -81,6 +81,8 @@ app.use('/pastor.ia', createProxyMiddleware({
 app.use(express.json());
 app.get('/health', (req, res) => res.status(200).json({ ok: true })); // Root health check
 app.get('/api/health', (req, res) => res.status(200).json({ ok: true })); // API health check
+
+// --- ADMIN FIX ENDPOINT (Removed) ---
 app.use(bodyParser.json());
 
 // Configure Multer (Memory Storage)
@@ -585,6 +587,153 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
     }
 });
 
+// --- REVIEW SYSTEM ROUTES ---
+
+// 1. Create Review
+app.post('/api/reviews/create', authenticateToken, async (req, res) => {
+    const { businessId, rating, comment, userName } = req.body;
+    const userId = req.user.id;
+
+    if (!businessId || !rating) {
+        return res.status(400).json({ error: 'Business ID and Rating are required' });
+    }
+
+    try {
+        const reviewId = `rev_${Date.now()}`;
+        const newReview = {
+            id: reviewId,
+            businessId,
+            userId,
+            userName: userName || 'Anônimo', // Fallback
+            rating: Number(rating),
+            comment: comment || '',
+            date: Date.now(),
+            status: Number(rating) >= 4 ? 'approved' : 'pending', // Auto-approve high ratings
+            reply: null
+        };
+
+        await db.collection('reviews').doc(reviewId).set(newReview);
+
+        // Update Business Average Rating
+        const reviewsSnapshot = await db.collection('reviews')
+            .where('businessId', '==', businessId)
+            // .where('status', '==', 'approved') // Ideally filter approved, but for simplicity/MVP include all for now or optimize aggregation
+            .get();
+
+        const reviews = reviewsSnapshot.docs.map(d => d.data());
+        const totalStars = reviews.reduce((acc, r) => acc + r.rating, 0);
+        const avgRating = totalStars / reviews.length;
+
+        await db.collection('business').doc(businessId).update({
+            rating: avgRating,
+            review_count: reviews.length
+        });
+
+        // --- LOYALTY: Award Points for Review (+10) ---
+        try {
+            await db.collection('leads').doc(userId).update({
+                points: FieldValue.increment(10)
+            });
+        } catch (e) {
+            console.error("Failed to award points for review", e);
+            // Don't fail the request if points fail, just log it
+        }
+
+        res.json({ success: true, review: newReview, pointsEarned: 10 });
+    } catch (error) {
+        console.error('Error creating review:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// --- LOYALTY ROUTES ---
+
+// 1. Earn Points (Check-in / Share / Generic Action)
+// secure: called by authenticated user, logic on server validates limits if needed
+app.post('/api/loyalty/earn', authenticateToken, async (req, res) => {
+    const { action } = req.body; // 'checkin', 'share'
+    const userId = req.user.id;
+
+    let points = 0;
+    if (action === 'checkin') points = 2;
+    if (action === 'share') points = 5;
+
+    if (points === 0) return res.status(400).json({ error: 'Invalid action' });
+
+    try {
+        await db.collection('leads').doc(userId).update({
+            points: FieldValue.increment(points)
+        });
+        res.json({ success: true, pointsEarned: points });
+    } catch (e) {
+        console.error('Error earning points:', e);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 2. Get Balance
+app.get('/api/loyalty/balance/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const doc = await db.collection('leads').doc(userId).get();
+        if (!doc.exists) return res.json({ points: 0 });
+        res.json({ points: doc.data().points || 0 });
+    } catch (e) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 2. Get Reviews for Business
+app.get('/api/reviews/:businessId', async (req, res) => {
+    try {
+        const { businessId } = req.params;
+        const snapshot = await db.collection('reviews')
+            .where('businessId', '==', businessId)
+            .orderBy('date', 'desc')
+            .limit(20) // Limit for performance
+            .get();
+
+        const reviews = snapshot.docs.map(doc => doc.data());
+        res.json(reviews);
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 3. Reply to Review (Owner Only)
+app.post('/api/reviews/reply', authenticateToken, async (req, res) => {
+    const { reviewId, replyText } = req.body;
+    const ownerId = req.user.id;
+
+    try {
+        const reviewRef = db.collection('reviews').doc(reviewId);
+        const reviewDoc = await reviewRef.get();
+
+        if (!reviewDoc.exists) {
+            return res.status(404).json({ error: 'Review not found' });
+        }
+
+        const businessId = reviewDoc.data().businessId;
+        const businessDoc = await db.collection('business').doc(businessId).get();
+
+        if (!businessDoc.exists || businessDoc.data().owner_id !== ownerId) {
+            return res.status(403).json({ error: 'Unauthorized: Only the business owner can reply.' });
+        }
+
+        const reply = {
+            text: replyText,
+            date: Date.now()
+        };
+
+        await reviewRef.update({ reply });
+        res.json({ success: true, reply });
+
+    } catch (error) {
+        console.error('Error replying to review:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // 1.5 Create Claim Request
 app.post('/api/claims/create', authenticateToken, async (req, res) => {
     const { businessId, userName, userEmail, userPhone, planSelected, billingCycle } = req.body;
@@ -1255,6 +1404,51 @@ app.get('/api/admin/leads', authenticateAdmin, async (req, res) => {
     }
 });
 
+// 5. Sync Users from Firebase Auth to Leads Collection
+app.post('/api/admin/sync-users', authenticateAdmin, async (req, res) => {
+    console.log('POST /api/admin/sync-users called');
+    try {
+        const listUsersResult = await auth.listUsers(1000); // Batch size
+        const users = listUsersResult.users;
+        let syncedCount = 0;
+        let createdCount = 0;
+
+        const timestamp = new Date().toISOString();
+
+        for (const user of users) {
+            const leadRef = db.collection('leads').doc(user.uid);
+            const doc = await leadRef.get();
+
+            if (!doc.exists) {
+                await leadRef.set({
+                    uid: user.uid,
+                    email: user.email || '',
+                    name: user.displayName || 'Sem Nome (Importado)',
+                    phone: user.phoneNumber || '',
+                    city: 'Indefinido',
+                    state: 'MG',
+                    referral_source: 'admin_sync',
+                    created_at: user.metadata.creationTime || timestamp,
+                    last_active: user.metadata.lastSignInTime || timestamp,
+                    has_business: false, // Default
+                    stats: { visits: 0, reviews: 0, whatsapp_clicks: 0 }
+                });
+                createdCount++;
+            }
+            syncedCount++;
+        }
+
+        res.json({
+            success: true,
+            message: `Sync complete. Processed ${syncedCount} users. Created ${createdCount} new leads.`
+        });
+
+    } catch (error) {
+        console.error('Error in POST /api/admin/sync-users:', error);
+        res.status(500).json({ error: 'Internal server error: ' + error.message });
+    }
+});
+
 // 1. Admin: List All Businesses (including pending/deleted)
 // 1. Admin: List All Businesses (including pending/deleted)
 app.get('/api/admin/businesses', authenticateAdmin, async (req, res) => {
@@ -1373,6 +1567,44 @@ app.delete('/api/admin/business/:id', authenticateAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin Delete Error:', error);
         res.status(500).json({ error: `Server Error: ${error.message}` });
+    }
+});
+
+// 2.1 Admin: Bulk Delete Businesses
+app.post('/api/admin/business/bulk-delete', authenticateAdmin, async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'No IDs provided' });
+    }
+
+    console.log(`Attempting to bulk delete ${ids.length} businesses`);
+
+    try {
+        let count = 0;
+        const chunkSize = 499; // Firestore max is 500
+        const chunks = [];
+
+        for (let i = 0; i < ids.length; i += chunkSize) {
+            chunks.push(ids.slice(i, i + chunkSize));
+        }
+
+        console.log(`Processing ${chunks.length} batches...`);
+
+        for (const chunk of chunks) {
+            const batch = db.batch();
+            chunk.forEach(id => {
+                const ref = db.collection('business').doc(id);
+                batch.delete(ref);
+                count++;
+            });
+            await batch.commit();
+            console.log(`Batch committed. Total so far: ${count}`);
+        }
+
+        res.json({ success: true, count, message: `${count} businesses deleted` });
+    } catch (error) {
+        console.error('Bulk Delete Error:', error);
+        res.status(500).json({ error: 'Bulk delete failed: ' + error.message });
     }
 });
 
@@ -2056,27 +2288,7 @@ app.post('/api/subscription/subscribe', authenticateToken, async (req, res) => {
 async function saveGooglePlaceToDb(place, defaultCity = '', defaultState = '') {
     const businessRef = db.collection('business');
 
-    // Check if exists
-    const snapshot = await businessRef.where('google_place_id', '==', place.place_id).get();
-    if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-
-        // 🚨 FIX: If existing record is missing City/State, update it!
-        if ((!data.city || !data.state) && (defaultCity || defaultState)) {
-            console.log(`♻️ Repairing existing record: ${data.name}`);
-            await doc.ref.update({
-                city: data.city || defaultCity,
-                state: data.state || defaultState,
-                updated_at: Date.now()
-            });
-            return { ...data, city: data.city || defaultCity, state: data.state || defaultState };
-        }
-
-        return data; // Return existing
-    }
-
-    // Map Category
+    // 1. Parse Data FIRST (so we can update existing records if needed)
     let category = 'Outros';
     const types = place.types || [];
     if (types.includes('restaurant') || types.includes('food') || types.includes('meal_takeaway') || types.includes('bar') || types.includes('cafe')) category = 'Alimentação';
@@ -2092,73 +2304,106 @@ async function saveGooglePlaceToDb(place, defaultCity = '', defaultState = '') {
     else if (types.includes('school') || types.includes('university')) category = 'Educação';
     else if (types.includes('bank') || types.includes('atm') || types.includes('finance')) category = 'Serviços';
     else {
-        // Dynamic Category Creation with Portuguese Translation
+        // Dynamic Category
         const primaryType = types[0];
         if (primaryType) {
-            const translations = {
-                'pet_store': 'Pet Shop',
-                'veterinary_care': 'Veterinária',
-                'real_estate_agency': 'Imobiliária',
-                'lawyer': 'Advocacia',
-                'dentist': 'Dentista',
-                'insurance_agency': 'Seguros',
-                'travel_agency': 'Agência de Viagens',
-                'hardware_store': 'Material de Construção',
-                'furniture_store': 'Móveis',
-                'home_goods_store': 'Casa e Decoração',
-                'jewelry_store': 'Joalheria',
-                'book_store': 'Livraria',
-                'movie_theater': 'Cinema',
-                'museum': 'Museu',
-                'park': 'Parque',
-                'laundry': 'Lavanderia',
-                'florist': 'Floricultura',
-                'accounting': 'Contabilidade',
-                'car_dealer': 'Concessionária',
-                'church': 'Igreja',
-                'place_of_worship': 'Igreja',
-                'library': 'Biblioteca',
-                'post_office': 'Correios'
-            };
-
-            if (translations[primaryType]) {
-                category = translations[primaryType];
-            } else {
-                // Fallback: Format English type nicely if no translation found
-                category = primaryType
-                    .split('_')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ');
-            }
+            category = primaryType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         }
     }
 
-    // Try to parse city/state from formatted_address even if not provided
-    // Format: "Rua X, 123 - Bairro, Cidade - UF, CEP" or "City, State, Country"
+    // Try to parse city/state/country from formatted_address
     let parsedCity = defaultCity;
     let parsedState = defaultState;
+    let parsedCountry = 'Brasil'; // Default
 
     if (place.formatted_address) {
         const parts = place.formatted_address.split(',').map(p => p.trim());
-        // Simple heuristic for Brazil addresses
-        // Often the last part is Country, second to last is "City - State" or just State
+        const lastPart = parts[parts.length - 1];
 
-        // Strategy: Look for "City - UF" pattern
-        // Valid UFs in Brazil
+        // Brazil States List
         const ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
+        let foundBrazilPattern = false;
+
+        // PRIORITIZE: Scan for "City - UF" pattern (Strongest signal for Brazil addresses)
         for (const part of parts) {
             if (part && part.includes('-')) {
                 const subParts = part.split('-').map(sp => sp.trim());
                 if (subParts.length >= 2) {
-                    const potentialUF = subParts[subParts.length - 1].toUpperCase();
-                    if (ufs.includes(potentialUF)) {
+                    const potentialUF = subParts[subParts.length - 1].toUpperCase().substring(0, 2);
+                    if (ufs.includes(potentialUF) && /^[A-Z]{2}$/.test(potentialUF)) {
                         parsedState = potentialUF;
-                        parsedCity = subParts[0]; // Assume the part before UF is City
+                        subParts.pop();
+                        parsedCity = subParts.join('-');
+                        foundBrazilPattern = true;
+                        parsedCountry = 'Brasil';
+                        break;
                     }
                 }
             }
         }
+
+        // FALLBACK
+        if (!foundBrazilPattern) {
+            if (lastPart === 'EUA' || lastPart === 'USA' || lastPart === 'United States') {
+                parsedCountry = 'Estados Unidos';
+                if (parts.length >= 3) {
+                    parsedCity = parts[parts.length - 3];
+                    const stateMatch = parts[parts.length - 2].match(/([A-Z]{2})/);
+                    if (stateMatch) parsedState = stateMatch[0];
+                }
+            } else {
+                parsedCountry = lastPart;
+                if (parts.length >= 3) {
+                    parsedCity = parts[parts.length - 3];
+                    parsedState = parts[parts.length - 2];
+                }
+            }
+        }
+    }
+
+    // 2. Check if exists
+    const snapshot = await businessRef.where('google_place_id', '==', place.place_id).get();
+
+    if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+
+        // 🚨 UPDATE logic: If parsed data is better/different, update!
+        // Specifically fix the "City includes numbers" bug
+        // e.g. data.city = "1119 - São Benedito" (Bad) vs parsedCity = "Uberaba" (Good)
+
+        const isCityBad = data.city && /\d/.test(data.city); // Simple heuristic: City shouldn't have numbers usually, or at least check strict diff
+        const isBetterData = parsedCity && parsedState && (parsedCity !== data.city || parsedState !== data.state);
+
+        if (isBetterData || !data.city) {
+            console.log(`♻️ Auto-Repairing Record: ${data.name}`);
+            console.log(`   Old: ${data.city} / ${data.state}`);
+            console.log(`   New: ${parsedCity} / ${parsedState}`);
+
+            await doc.ref.update({
+                city: parsedCity,
+                state: parsedState,
+                country: parsedCountry,
+                updated_at: Date.now()
+            });
+            return { ...data, city: parsedCity, state: parsedState };
+        }
+        return data;
+    }
+
+    // 3. Create new business object (using parsed data from step 1)
+
+    // 🚨 FORCE FALLBACK: If Google didn't give us a clear City/State, use the Search Context
+    // Only apply 'MG' default if Country is Brazil or we are unsure (and defaultState is MG)
+
+    if (!parsedCity || parsedCity === '') {
+        parsedCity = defaultCity || 'Uberaba'; // Extremely unlikely fallback
+    }
+
+    // Only force defaultState (MG) if country is Brasil to avoid "Summerville - MG"
+    if ((!parsedState || parsedState === '') && parsedCountry === 'Brasil') {
+        parsedState = defaultState || 'MG';
     }
 
     // Pass the raw address components if you ever want to upgrade to Places Details
@@ -2183,6 +2428,7 @@ async function saveGooglePlaceToDb(place, defaultCity = '', defaultState = '') {
         // CRITICAL DATA FOR FILTERS
         city: parsedCity,
         state: parsedState,
+        country: parsedCountry,
 
         rating: place.rating || 0,
         user_ratings_total: place.user_ratings_total || 0,
@@ -2196,7 +2442,7 @@ async function saveGooglePlaceToDb(place, defaultCity = '', defaultState = '') {
 
     // Save
     await businessRef.doc(newBusiness.business_id).set(newBusiness);
-    console.log(`✅ Auto-Imported: ${newBusiness.name} [${newBusiness.city} - ${newBusiness.state}]`);
+    console.log(`✅ Auto-Imported: ${newBusiness.name} [${newBusiness.city} - ${newBusiness.state}, ${newBusiness.country}]`);
     return newBusiness;
 }
 
@@ -2431,16 +2677,33 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
             let city = '';
             let state = '';
             let zip_code = '';
+            let country = '';
 
             if (details.address_components) {
                 details.address_components.forEach(comp => {
+                    if (comp.types.includes('country')) country = comp.long_name;
                     if (comp.types.includes('route')) street = comp.long_name;
                     if (comp.types.includes('street_number')) number = comp.long_name;
                     if (comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality')) neighborhood = comp.long_name;
-                    if (comp.types.includes('administrative_area_level_2')) city = comp.long_name;
+
+                    // City Parsing Priority: locality > administrative_area_level_2 (Brazil Mun.)
+                    if (comp.types.includes('locality')) city = comp.long_name;
+
                     if (comp.types.includes('administrative_area_level_1')) state = comp.short_name;
                     if (comp.types.includes('postal_code')) zip_code = comp.long_name;
                 });
+
+                // SANITY CHECK: If city is numeric (e.g. "775"), clear it to let fallback handle it
+                if (city && /^\d+$/.test(city.trim())) {
+                    console.log(`Invalid numeric city detected: ${city}. Resetting.`);
+                    city = '';
+                }
+
+                // Fallback for City if locality missing (common in some regions)
+                if (!city) {
+                    const adm2 = details.address_components.find(c => c.types.includes('administrative_area_level_2'));
+                    if (adm2) city = adm2.long_name;
+                }
             }
 
             // Fallback for City/State if not found in components (using basic address split)
@@ -2460,11 +2723,17 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
                 }
             }
 
-            // ULTIMATE FALLBACK: Use defaultCity from frontend
+            // ULTIMATE FALLBACK: Use defaultCity from frontend (Only if totally failed)
             if (!city && defaultCity) {
+                // If we found a Country but no City, maybe keep City empty? 
+                // But for app logic, usually explicit context is better than null.
                 console.log(`Using default city '${defaultCity}' for ${place.name}`);
                 city = defaultCity;
             }
+
+            // If Country is missing but we have a defaultCity that implies context, we might guess.
+            // But Google Details basically always gives Country.
+            if (!country) country = 'Brasil'; // Legacy default
 
             // Phone / WhatsApp
             let whatsapp = '';
@@ -2511,6 +2780,7 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
                 category: place.category || 'Other',
                 description: description,
                 whatsapp: whatsapp,
+                phone: whatsapp, // Clone to phone field for generic calling
                 website: details.website || '',
 
                 // Location
@@ -2521,6 +2791,7 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
                 neighborhood: neighborhood,
                 city: city,
                 state: state,
+                country: country,
                 zip_code: zip_code,
                 address: details.formatted_address || place.address, // Full formatted address as backup
 
@@ -2548,6 +2819,137 @@ app.post('/api/admin/google/import', authenticateAdmin, async (req, res) => {
     } catch (error) {
         console.error('Import Error:', error);
         res.status(500).json({ error: 'Internal server error during import' });
+    }
+});
+
+// === ADDRESS MAINTENANCE ROUTE ===
+app.post('/api/admin/maintenance/fix-addresses', authenticateAdmin, async (req, res) => {
+    console.log('Starting Address Fix Scan...');
+    try {
+        const snapshot = await db.collection('business').get();
+        let fixedCount = 0;
+        let scannedCount = 0;
+        let unfixableCount = 0;
+
+        const updates = [];
+
+        snapshot.forEach(doc => {
+            scannedCount++;
+            const b = doc.data();
+            let needsUpdate = false;
+            let newCity = b.city;
+            let newState = b.state;
+            let newCountry = b.country;
+            let newZip = b.zip_code;
+
+            // CRITERIA FOR BAD DATA:
+            // 1. City is numeric/garbage (e.g. "272", "364 - ...")
+            // 2. City contains " - " (often means parsing error likes "Number - Neighborhood")
+            // 3. Country is a Zip Code (contains numbers and dash/hyphen)
+            const isCityBad = !newCity || /\d/.test(newCity) || newCity.includes(' - ');
+            const isCountryBad = !newCountry || /[\d]/.test(newCountry); // Country shouldn't have numbers
+            const isStateBad = !newState || newState.includes(' - ') || newState.length > 3; // States are usually 2 chars code
+
+            if (isCityBad || isCountryBad || isStateBad) {
+                // ATTEMPT RE-PARSE from full address
+                // Expected Format: "Rua X, 123 - Bairro, Cidade - UF, CEP, País"
+                // OR: "..., Cidade - UF, CEP, País"
+                // We rely on " - UF," pattern
+                if (b.address) {
+                    // Regex to find "City - ST" pattern before a Zip Code or Country
+                    // Matches: "City Name - ST"
+                    // This is robust for Brazil addresses
+                    const cityStateRegex = /([A-Za-záàâãéèêíïóôõöúçñ\s]+)\s+-\s+([A-Z]{2})/;
+                    // We look for this pattern in the whole address string
+
+                    // Let's try to split by comma first to be safer
+                    const parts = b.address.split(',').map(p => p.trim());
+
+                    // Strategy: Find the part that matches "City - ST"
+                    let foundCityState = false;
+
+                    // Iterate backwards
+                    for (let i = parts.length - 1; i >= 0; i--) {
+                        const part = parts[i];
+                        const match = part.match(/^(.+?)\s+-\s+([A-Z]{2})$/);
+                        if (match) {
+                            newCity = match[1].trim();
+                            newState = match[2].trim();
+                            foundCityState = true;
+
+                            // If State is long name (rare in this format, but possible), we might need mapping, 
+                            // but usually Google gives "MG", "SP".
+
+                            // Try to grab Zip (usually next part after City-State if reading forward, 
+                            // or previous part if reading backward? No, standardized address:
+                            // "..., City - ST, Zip, Country"
+                            // So Zip is at i+1, Country at i+2?
+                            if (parts[i + 1] && /[\d-]+/.test(parts[i + 1])) {
+                                newZip = parts[i + 1];
+                            }
+                            if (parts[i + 2]) {
+                                newCountry = parts[i + 2];
+                            } else if (parts[i + 1] && !/[\d]/.test(parts[i + 1])) {
+                                // If i+1 isn't zip (no numbers), maybe it's country
+                                newCountry = parts[i + 1];
+                            }
+
+                            // Default Country
+                            if (!newCountry || /[\d]/.test(newCountry)) {
+                                newCountry = 'Brasil';
+                            }
+
+                            needsUpdate = true;
+                            break;
+                        }
+                    }
+
+                    if (!foundCityState) {
+                        // Fallback: If no " - ST" pattern, maybe just parsed wrongly.
+                        // Manually cleaning known bad patterns?
+                        // User mentioned "272 - Olinda" -> This is Number - Neighborhood
+                        // If we can't find clear City-State, we might mark as unfixable or set defaults.
+                        unfixableCount++;
+                        // Don't update if we aren't sure
+                    }
+                }
+            }
+
+            if (needsUpdate) {
+                // Sanity check before committing
+                if (newCity && !/\d/.test(newCity) && newState && newState.length === 2) {
+                    updates.push(db.collection('business').doc(b.business_id).update({
+                        city: newCity,
+                        state: newState,
+                        country: newCountry || 'Brasil',
+                        zip_code: newZip || b.zip_code
+                    }));
+                    fixedCount++;
+                    console.log(`Fixing ${b.name}: ${newCity} - ${newState}, ${newCountry}`);
+                } else {
+                    unfixableCount++;
+                    console.warn(`Could not confidentally fix ${b.name} (Address: ${b.address})`);
+                }
+            }
+        });
+
+        // Current batch limit request? 
+        // Firestore batch is 500. We might have more.
+        // Doing Promise.all might be too heavy if thousands.
+        // But for <500 items it's fine.
+        await Promise.all(updates);
+
+        res.json({
+            success: true,
+            scanned: scannedCount,
+            fixed: fixedCount,
+            unfixable: unfixableCount,
+            message: `Varredura concluída. ${fixedCount} corrigidos. ${unfixableCount} requerem atenção manual.`
+        });
+
+    } catch (error) {
+        console.error('Maintenance Scan Error:', error);
+        res.status(500).json({ error: 'Maintenance failed' });
     }
 });
 
@@ -2698,8 +3100,14 @@ app.post('/api/ai/chat', async (req, res) => {
 
         // 1. Retrieve Context
         const snapshot = await db.collection('business').get();
-        const businesses = snapshot.docs.map(doc => {
+        let businesses = snapshot.docs.map(doc => {
             const d = doc.data();
+            // Calculate distance if userLocation is available
+            let dist = null;
+            if (userLocation && userLocation.lat && userLocation.lng && d.latitude && d.longitude) {
+                dist = calculateDistance(userLocation.lat, userLocation.lng, d.latitude, d.longitude);
+            }
+
             return {
                 id: doc.id,
                 name: d.name,
@@ -2710,9 +3118,19 @@ app.post('/api/ai/chat', async (req, res) => {
                 phone: d.phone || 'N/A',
                 whatsapp: d.whatsapp || 'N/A',
                 address: d.address || '',
-                neighborhood: d.neighborhood || ''
+                neighborhood: d.neighborhood || '',
+                distance: dist // Add distance to context
             };
         });
+
+        // Sort by distance if available
+        if (userLocation && userLocation.lat && userLocation.lng) {
+            businesses.sort((a, b) => {
+                if (a.distance === null) return 1;
+                if (b.distance === null) return -1;
+                return a.distance - b.distance;
+            });
+        }
 
         const activeBusinesses = businesses.filter(b => b.status !== 'closed').slice(0, 50);
 
@@ -2724,7 +3142,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
         --- CONHECIMENTO DO SISTEMA (VOCÊ SABE TUDO) ---
         1. **O que é o TáAberto?**: Um hub de tempo real. Mostramos quem está ABERTO AGORA. Sem listas velhas.
-        2. **Radar Ativo**: Funcionalidade única que mostra em tempo real se o negócio está operando, atualizado a cada minuto.
+        2. **O problema do Google**: "O Google tá velho. Tem lugar fechado que diz que tá aberto, e lugar aberto que nem aparece." O TáAberto resolve isso com validação em tempo real.
         3. **Planos & Monetização (Venda isso!)**:
            - **Plano Gratuito**: Básico. Aparece no mapa.
            - **Plano PREMIUM (R$ 29,90/mês)**: 
@@ -2737,7 +3155,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
         --- DIRETRIZES DE PERSONALIDADE (MODO: PHODA) ---
         - **Tom de Voz**: Confiante, Inteligente, Visionário, Amigável, mas Persuasivo. Use emojis (🚀, 🟣, 💎, 🔥).
-        - **Proativo**: Se o usuário parecer dono de negócio ("como cadastro?", "minha loja"), assuma o MODO VENDAS.
+        - **Proativo**: Se o usuário parecer dono de negócio ("como cadastro?", "minha loja", "ganhar dinheiro com isso"), assuma o MODO VENDAS.
         - **Sábio**: Se o usuário buscar lugares, seja o melhor guia da cidade.
 
         --- REGRAS DE INTERAÇÃO ---
@@ -2746,16 +3164,17 @@ app.post('/api/ai/chat', async (req, res) => {
            - Filtre por abertos se o usuário pedir "agora".
            - Se não houver nada, sugira algo próximo ou similar.
         
-        2. **MODO VENDAS (Gatilho: "Cadastrar", "Dono", "Minha empresa", "Premium", "Divulgar")**:
-           - Explique por que o TÁABERTO é o futuro.
-           - Venda o PREMIUM. Compare o custo-benefício.
+        2. **MODO VENDAS (Gatilho: "Cadastrar", "Dono", "Minha empresa", "Premium", "Divulgar", "Ganhar dinheiro", "Google desatualizado")**:
+           - Se o usuário falar sobre o Google estar desatualizado, concorde e diga: "Exatamente! Por isso o TáAberto é uma mina de ouro."
+           - Explique que ele pode **Cadastrar empresas (dele ou de outros)** e garantir que os clientes achem o lugar certo na hora certa.
+           - Venda o PREMIUM como a ferramenta para se destacar nesse caos.
            - Use o gatilho \`action: "sales_pitch"\` no JSON para mostrar o botão de cadastro.
 
         3. **MODO SUPORTE**:
            - Dúvidas sobre o sistema? Explique com autoridade. "Nosso sistema valida horário em tempo real..."
 
         --- FORMATO DE RESPOSTA (JSON OBRIGATÓRIO) ---
-        Responda APENAS com este JSON:
+        Responda APENAS com este JSON válido. NÃO use markdown code blocks (\`\`\`json). Apenas o objeto cru:
         {
             "text": "Sua resposta textual aqui. Use markdown para negrito (*texto*) se precisar.",
             "results": [ ...array de objetos dos negócios sugeridos do contexto... ],
@@ -2781,30 +3200,50 @@ app.post('/api/ai/chat', async (req, res) => {
             history: chatHistory,
             generationConfig: {
                 maxOutputTokens: 1000,
+                temperature: 0.7, // Slightly higher creative freedom for "phoda" persona
             },
         });
 
         // 4. Send Message with System Instruction prepended (Simulated System Message)
-        // Gemini 2.0 Flash supports system instructions better via config, but prompt engineering works too.
-        // We will send the system instruction + user message combined for the latest turn to ensure context is fresh.
         const fullPrompt = `${systemInstruction}\n\nUSER MESSAGE: ${message}`;
 
         const result = await chat.sendMessage(fullPrompt);
         const response = result.response;
         let text = response.text();
 
-        // Cleanup JSON
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        console.log('🤖 Raw Gemini Response:', text); // Debug Log
 
-        const data = JSON.parse(text);
+        // Improved JSON Parsing with Fallback
+        let data;
+        try {
+            // First attempt: Clean generic markdown code blocks
+            let cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            data = JSON.parse(cleanText);
+        } catch (parseError) {
+            console.warn('⚠️ JSON Parse Failed. Attempting Regex Extraction...');
+            // Fallback: Try to find the first '{' and last '}'
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    data = JSON.parse(jsonMatch[0]);
+                } catch (regexError) {
+                    console.error('❌ Regex Extraction Failed:', regexError);
+                    throw new Error('Failed to parse AI response');
+                }
+            } else {
+                throw new Error('No JSON structure found in AI response');
+            }
+        }
 
         res.json(data);
 
     } catch (error) {
         console.error('AI Chat Error:', error);
+        // Return a safe fallback response instead of crashing
         res.json({
-            text: "Ops, tive um raciocínio confuso agora. Pode tentar de novo? 😵‍💫",
-            results: []
+            text: "Eita, minha rede neural deu um nó aqui! 🤯 Mas o resumo é: O TáAberto é a revolução pra sair desse caos de informações velhas. Quer fazer parte? Clica em cadastrar! 🚀",
+            results: [],
+            action: "sales_pitch"
         });
     }
 });

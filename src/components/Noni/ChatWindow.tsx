@@ -3,6 +3,7 @@ import { NoniAvatar } from './NoniAvatar';
 import { X, Send, MapPin } from 'lucide-react';
 import { useChat } from '../../App';
 import { useBusiness } from '../../context/BusinessContext';
+import { useLocation } from '../../context/LocationContext';
 
 interface Message {
     id: string;
@@ -15,6 +16,7 @@ interface Message {
 export const ChatWindow: React.FC = () => {
     const { setIsChatOpen } = useChat();
     const { userLocation, distances } = useBusiness();
+    const { detectLocation, currentCity, currentState } = useLocation();
     const [messages, setMessages] = useState<Message[]>([
         { id: '1', sender: 'ai', text: 'Olá! Sou o Nôni 🟣\nEstou procurando os melhores lugares abertos pra você. O que deseja?' }
     ]);
@@ -27,6 +29,13 @@ export const ChatWindow: React.FC = () => {
     };
 
     useEffect(scrollToBottom, [messages, isTyping]);
+
+    // Auto-detect location on chat open if not available
+    useEffect(() => {
+        if (!userLocation) {
+            detectLocation();
+        }
+    }, [userLocation, detectLocation]);
 
     const handleSend = async () => {
         if (!input.trim()) return;
@@ -88,7 +97,10 @@ export const ChatWindow: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="font-bold text-base">Nôni IA</h3>
-                        <p className="text-xs opacity-90">Online agora</p>
+                        <p className="text-xs opacity-90 flex items-center gap-1">
+                            <MapPin size={10} />
+                            {currentCity ? `${currentCity} - ${currentState}` : 'Detectando local...'}
+                        </p>
                     </div>
                 </div>
                 <button

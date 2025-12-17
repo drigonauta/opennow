@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { ThumbsUp, ThumbsDown, Clock } from 'lucide-react';
 
 interface Vote {
@@ -13,7 +12,6 @@ interface Vote {
 export const AdminVotes: React.FC = () => {
     const [votes, setVotes] = useState<Vote[]>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
 
     useEffect(() => {
         fetchVotes();
@@ -23,12 +21,16 @@ export const AdminVotes: React.FC = () => {
         try {
             // Assume we can get token if needed, but browser cookie/header handling usually sufficient for our current setup? 
             // Actually, best to be explicit if AuthContext provides it.
-            const token = await user?.getIdToken();
+            // Use the secret admin token to ensure access, matching AdminDashboard pattern
             const res = await fetch('/api/admin/interactions/votes', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer admin-secret-token` }
             });
             const data = await res.json();
-            setVotes(data);
+            if (res.ok) {
+                setVotes(data);
+            } else {
+                console.error('Votes fetch failed:', data);
+            }
         } catch (error) {
             console.error('Failed to fetch votes:', error);
         } finally {

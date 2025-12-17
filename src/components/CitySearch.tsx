@@ -12,11 +12,12 @@ export const CitySearch: React.FC = () => {
     // Sync input with context changes (e.g. GPS detection)
     useEffect(() => {
         const newVal = currentCity && currentState ? `${currentCity}, ${currentState}` : currentCity || '';
-        if (inputValue !== newVal) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setInputValue(newVal);
-        }
-    }, [currentCity, currentState, inputValue]);
+        // Only update if context is different from current input (to allow typing if it matches?)
+        // Actually, standard pattern is just sync on change. 
+        // But if user clears input, we don't want it to come back unless context forces it?
+        // Let's trust that context only changes on meaningful updates.
+        setInputValue(newVal);
+    }, [currentCity, currentState]);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -45,8 +46,7 @@ export const CitySearch: React.FC = () => {
             const service = new window.google.maps.places.AutocompleteService();
             service.getPlacePredictions({
                 input: value,
-                types: ['(cities)'],
-                componentRestrictions: { country: 'br' }
+                types: ['(cities)']
             }, (predictions: any[], status: any) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
                     setSuggestions(predictions);

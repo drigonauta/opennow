@@ -17,6 +17,7 @@ interface Business {
     verified?: boolean;
     state?: string;
     city?: string;
+    country?: string;
     open_time?: string;
     close_time?: string;
 }

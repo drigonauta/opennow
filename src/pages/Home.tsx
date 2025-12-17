@@ -24,10 +24,13 @@ export const Home: React.FC = () => {
     const [itemsPerPage, setItemsPerPage] = useState(12);
     const [currentPage, setCurrentPage] = useState(1);
 
+    const [specificTime, setSpecificTime] = useState('');
+    const [showAdvanced, setShowAdvanced] = useState(false);
+
     // Reset page when filters change
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [filteredBusinesses, searchQuery, isOpenOnly]);
+    }, [filteredBusinesses, searchQuery, isOpenOnly, specificTime]);
     const isBusinessOpen = (business: any) => {
         if (business.forced_status === 'open') return true;
         if (business.forced_status === 'closed') return false;
@@ -35,6 +38,13 @@ export const Home: React.FC = () => {
         const now = new Date();
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         return currentTime >= business.open_time && currentTime <= business.close_time;
+    };
+
+    const isBusinessOpenAt = (business: any, time: string) => {
+        if (!time) return true;
+        if (business.forced_status === 'open') return true;
+        if (business.forced_status === 'closed') return false;
+        return time >= business.open_time && time <= business.close_time;
     };
 
     // Helper for normalization
@@ -84,11 +94,25 @@ export const Home: React.FC = () => {
 
     // Final display list (Search on top of Context Filter)
     const displayBusinesses = React.useMemo(() => {
+        let results = filteredBusinesses;
+
+        // 1. Filter by Search Query
         if (searchQuery && fuse) {
-            return fuse.search(searchQuery).map((r: any) => r.item);
+            results = fuse.search(searchQuery).map((r: any) => r.item);
         }
-        return filteredBusinesses;
-    }, [filteredBusinesses, searchQuery, fuse]);
+
+        // 2. Filter by Open Status (Now)
+        if (isOpenOnly) {
+            results = results.filter(b => isBusinessOpen(b));
+        }
+
+        // 3. Filter by Specific Time
+        if (specificTime) {
+            results = results.filter(b => isBusinessOpenAt(b, specificTime));
+        }
+
+        return results;
+    }, [filteredBusinesses, searchQuery, fuse, isOpenOnly, specificTime]);
 
     // Businesses are already sorted by distance in Context if userLocation is available
     const businessesWithDistance = displayBusinesses;
@@ -144,13 +168,19 @@ export const Home: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center z-10">
 
                     {/* Left Side: Advertising Space */}
-                    <div className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-ta-blue/5 p-8 text-center hover:bg-ta-blue/10 transition-colors group cursor-pointer backdrop-blur-sm">
+                    <div
+                        onClick={() => document.getElementById('ad-banner-section')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="relative overflow-hidden rounded-2xl border border-ta-blue/30 bg-ta-blue/5 p-8 text-center hover:bg-ta-blue/10 transition-all group cursor-pointer backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+                    >
                         <div className="absolute inset-0 bg-gradient-to-br from-ta-blue/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <h3 className="text-2xl font-bold text-ta-blue mb-2">Sua Marca Aqui</h3>
-                        <p className="text-blue-200/80 mb-6">Alcance milhares de clientes em Uberaba.</p>
-                        <span className="inline-block bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
-                            Anuncie Conosco
-                        </span>
+
+                        <h3 className="text-3xl font-bold text-ta-blue">Sua Marca Aqui</h3>
+                        <p className="text-blue-200/80 max-w-xs">Alcance milhares de clientes em Uberaba com destaque na página inicial.</p>
+
+                        <div className="mt-2 inline-flex items-center gap-2 bg-ta-blue/20 text-ta-blue px-6 py-2 rounded-full text-sm font-bold border border-ta-blue/30 group-hover:bg-ta-blue group-hover:text-black transition-all">
+                            <span>Anuncie Conosco</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                        </div>
                     </div>
 
                     {/* Right Side: User Focus CTA */}
@@ -193,12 +223,12 @@ export const Home: React.FC = () => {
             </div>
 
             {/* Location Selector */}
-            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4 relative z-50">
+            <div className="bg-ta-card border-b border-gray-800 py-4 px-4 flex flex-col justify-center items-center gap-4 relative z-[60]">
                 <CitySearch />
             </div>
 
             {/* Header / Search */}
-            <div className="bg-ta-bg/80 backdrop-blur-xl shadow-lg sticky top-0 z-40 border-b border-white/5 transition-all">
+            <div className="bg-ta-bg/80 backdrop-blur-xl shadow-lg sticky top-0 z-50 border-b border-white/5 transition-all">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col space-y-4">
                         <div className="flex justify-between items-center">
@@ -265,21 +295,22 @@ export const Home: React.FC = () => {
                             onSearch={async (term) => {
                                 if (!term) return;
 
-                                // Provide visual feedback (optional: add a generic loading state in UI if possible, 
-                                // but specifically resetting filters is key)
+                                // 1. Set Local Filter (Instant Feedback)
                                 setSelectedCategory('All');
                                 setIsOpenOnly(false);
 
-                                // Call Hybrid Search for Auto-Import
+                                // 2. Trigger Auto-Import (Background)
+                                console.log(`Searching for ${term}...`);
+
                                 try {
-                                    // Maybe show a toast or global loading indicator here? 
+                                    // Maybe show a toast or global loading indicator here?
                                     // For now, reliance on optimistic behavior is fine, but clearing filters ensures visibility.
                                     const res = await fetch('/api/search/hybrid', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                             term,
-                                            city: currentCity || 'Uberaba',
+                                            city: (currentCity && currentCity !== 'Todas') ? currentCity : 'Uberaba',
                                             lat: userLocation?.lat,
                                             lng: userLocation?.lng
                                         })
@@ -292,6 +323,45 @@ export const Home: React.FC = () => {
                                 }
                             }}
                         />
+
+                        {/* Advanced Filters Toggle */}
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className="text-xs text-blue-400 hover:underline flex items-center gap-1"
+                            >
+                                {showAdvanced ? 'Ocultar Filtros' : 'Filtros Avançados'}
+                            </button>
+                        </div>
+
+                        {/* Advanced Filters Panel */}
+                        {showAdvanced && (
+                            <div className="bg-[#0f172a] p-4 rounded-lg border border-gray-800 animate-fade-in text-white shadow-xl">
+                                <h4 className="text-sm font-bold mb-3 text-gray-300">Horário Específico</h4>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex flex-col">
+                                        <label className="text-xs text-gray-500 mb-1">Aberto às:</label>
+                                        <input
+                                            type="time"
+                                            value={specificTime}
+                                            onChange={(e) => {
+                                                setSpecificTime(e.target.value);
+                                                setIsOpenOnly(false); // Disable "Now" if specific time is set
+                                            }}
+                                            className="bg-gray-800 text-white border border-gray-700 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    {specificTime && (
+                                        <button
+                                            onClick={() => setSpecificTime('')}
+                                            className="text-xs text-red-400 hover:underline mt-4"
+                                        >
+                                            Limpar
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* CTA: Missing Company */}
                         <div className="flex justify-center">
@@ -308,9 +378,13 @@ export const Home: React.FC = () => {
                             selected={selectedCategory}
                             onSelect={setSelectedCategory}
                         />
-                        <AdBanner />
                     </div>
                 </div>
+            </div>
+
+            {/* Ad Banner Section - Now outside sticky header so it scrolls under */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" id="ad-banner-section">
+                <AdBanner />
             </div>
 
             {/* Map Preview Section */}

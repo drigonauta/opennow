@@ -12,7 +12,7 @@ export const createPixOrder = async (referenceId, customer, amount, description)
         customer: {
             name: customer.name,
             email: customer.email,
-            tax_id: customer.cpf || '12345678909',
+            tax_id: customer.cpf || '94723761691', // Fallback Valid CPF (User Provided)
             phones: [
                 {
                     country: '55',

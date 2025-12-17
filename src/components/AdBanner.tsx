@@ -18,7 +18,7 @@ export const AdBanner: React.FC = () => {
             <>
                 <div
                     onClick={() => setShowPurchaseModal(true)}
-                    className="block mb-8 relative group cursor-pointer transform hover:scale-[1.01] transition-transform duration-300"
+                    className="mb-8 relative group cursor-pointer transform hover:scale-[1.01] transition-transform duration-300"
                 >
                     {/* Frame do Outdoor */}
                     <div className="absolute inset-0 bg-gray-900 rounded-lg border-4 border-gray-800 shadow-2xl z-0"></div>
@@ -33,19 +33,19 @@ export const AdBanner: React.FC = () => {
                     ></div>
 
                     {/* Placeholder Content */}
-                    <div className="relative z-10 p-8 flex items-center justify-between opacity-80 group-hover:opacity-100 transition-opacity">
-                        <div className="flex-1">
-                            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white mb-2 uppercase tracking-widest" style={{ textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>
-                                Sua Marca Aqui
-                            </h2>
+                    <div className="relative z-10 p-8 flex flex-col items-center justify-center text-center opacity-80 group-hover:opacity-100 transition-opacity h-full">
+                        <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white mb-2 uppercase tracking-widest" style={{ textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>
+                            Sua Marca Aqui
+                        </h2>
+                        <div className="flex flex-col items-center gap-2">
                             <p className="text-green-400 font-mono text-sm tracking-wider animate-pulse flex items-center gap-2">
                                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                 DISPONÍVEL AGORA
                             </p>
-                        </div>
-                        <div className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded font-bold text-sm shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all flex items-center gap-2 uppercase tracking-wide">
-                            <Zap size={16} fill="currentColor" />
-                            Anuncie Conosco
+                            <span className="text-white font-bold text-sm bg-green-600/20 px-4 py-1.5 rounded-full border border-green-500/50 flex items-center gap-2 mt-2 group-hover:bg-green-600 group-hover:text-white transition-all">
+                                <Zap size={14} fill="currentColor" />
+                                Clique para Anunciar
+                            </span>
                         </div>
                     </div>
 
@@ -65,7 +65,7 @@ export const AdBanner: React.FC = () => {
     }
 
     return (
-        <a href={activeAd.link} target="_blank" rel="noopener noreferrer" className="block mb-8 relative group transform hover:scale-[1.005] transition-transform duration-300">
+        <a href={activeAd.link} target="_blank" rel="noopener noreferrer" className="hidden md:block mb-8 relative group transform hover:scale-[1.005] transition-transform duration-300">
             {/* Outdoor Structure (Frame) */}
             <div className="absolute -inset-1 bg-gray-900 rounded-xl shadow-2xl z-0"></div>
 

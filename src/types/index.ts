@@ -16,6 +16,7 @@ export interface Business {
     longitude: number;
     state?: string;
     city?: string;
+    country?: string;
     zip_code?: string;
     street?: string;
     number?: string;

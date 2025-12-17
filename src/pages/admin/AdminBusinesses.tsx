@@ -10,6 +10,8 @@ export const AdminBusinesses: React.FC = () => {
     // --- DELETE STATE ---
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
     // --- EDIT STATE ---
     const [editingBusiness, setEditingBusiness] = useState<any>(null);
@@ -54,6 +56,56 @@ export const AdminBusinesses: React.FC = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Tem certeza que deseja excluir ${selectedIds.size} empresas selecionadas? Esta ação é irreversível.`)) return;
+
+        setIsBulkDeleting(true);
+        try {
+            const token = localStorage.getItem('admin_token') || 'admin-secret-token';
+            const res = await fetch('/api/admin/business/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ ids: Array.from(selectedIds) })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(`Sucesso! ${data.count} empresas excluídas.`);
+                setBusinesses(prev => prev.filter(b => !selectedIds.has(b.business_id)));
+                setSelectedIds(new Set());
+            } else {
+                alert('Erro ao excluir em massa: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (error: any) {
+            console.error(error);
+            alert('Erro de conexão: ' + error.message);
+        } finally {
+            setIsBulkDeleting(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredBusinesses.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredBusinesses.map(b => b.business_id)));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        const newSet = new Set(selectedIds);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedIds(newSet);
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const isNew = !editingBusiness.business_id;
@@ -85,7 +137,7 @@ export const AdminBusinesses: React.FC = () => {
             setEditingBusiness({
                 name: '', category: 'Food', description: '', whatsapp: '',
                 open_time: '08:00', close_time: '18:00', latitude: -19.747, longitude: -47.939,
-                city: 'Uberaba', state: 'MG'
+                city: 'Uberaba', state: 'MG', country: 'Brasil'
             });
         }
         setIsModalOpen(true);
@@ -99,6 +151,16 @@ export const AdminBusinesses: React.FC = () => {
                     <p className="text-gray-400">Gerencie todos os negócios cadastrados.</p>
                 </div>
                 <div className="flex gap-2">
+                    {selectedIds.size > 0 && (
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={isBulkDeleting}
+                            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-red-900/20"
+                        >
+                            <Trash2 size={18} />
+                            Excluir Selecionados ({selectedIds.size})
+                        </button>
+                    )}
                     <button
                         onClick={async () => {
                             if (!confirm('ATENÇÃO: Isso excluirá PERMANENTEMENTE todas as empresas sem Cidade ou Estado definidos. Deseja continuar?')) return;
@@ -118,10 +180,35 @@ export const AdminBusinesses: React.FC = () => {
                                 alert('Erro de conexão.');
                             }
                         }}
-                        className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-lg shadow-red-900/20"
+                        className="bg-red-900/50 hover:bg-red-900/80 text-red-200 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors border border-red-800"
                     >
                         <Trash2 size={18} />
                         Limpar Incompletos
+                    </button>
+
+                    <button
+                        onClick={async () => {
+                            if (!confirm('Deseja varrer o banco de dados e tentar corrigir automaticamente endereços mal formatados?')) return;
+                            try {
+                                const res = await fetch('/api/admin/maintenance/fix-addresses', {
+                                    method: 'POST',
+                                    headers: { Authorization: 'Bearer admin-secret-token' }
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    alert(data.message);
+                                    window.location.reload();
+                                } else {
+                                    alert('Erro: ' + (data.error || 'Falha na varredura'));
+                                }
+                            } catch {
+                                alert('Erro de conexão.');
+                            }
+                        }}
+                        className="bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-400 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors border border-yellow-800"
+                    >
+                        <MapPin size={18} />
+                        Corrigir Endereços
                     </button>
                     <button
                         onClick={() => openEditModal()}
@@ -167,8 +254,18 @@ export const AdminBusinesses: React.FC = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-gray-800 text-xs uppercase text-gray-500 font-semibold bg-gray-900/50">
+                                <th className="px-6 py-4 w-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={filteredBusinesses.length > 0 && selectedIds.size === filteredBusinesses.length}
+                                        onChange={toggleSelectAll}
+                                        className="rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500"
+                                    />
+                                </th>
                                 <th className="px-6 py-4">Empresa</th>
-                                <th className="px-6 py-4">Localização</th>
+                                <th className="px-6 py-4">Cidade</th>
+                                <th className="px-6 py-4">Estado</th>
+                                <th className="px-6 py-4">País</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4">Plano</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
@@ -177,6 +274,14 @@ export const AdminBusinesses: React.FC = () => {
                         <tbody className="divide-y divide-gray-800">
                             {filteredBusinesses.map(business => (
                                 <tr key={business.business_id} className="group hover:bg-gray-800/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(business.business_id)}
+                                            onChange={() => toggleSelect(business.business_id)}
+                                            className="rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500"
+                                        />
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-lg font-bold text-gray-400 group-hover:bg-blue-900/30 group-hover:text-blue-400 transition-colors">
@@ -188,11 +293,14 @@ export const AdminBusinesses: React.FC = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                                            <MapPin size={14} />
-                                            {business.city || 'N/A'} - {business.state || 'MG'}
-                                        </div>
+                                    <td className="px-6 py-4 text-gray-400">
+                                        {business.city || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-400">
+                                        {business.state || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-400">
+                                        {business.country || 'Brasil'}
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${business.forced_status === 'open'
@@ -321,7 +429,16 @@ export const AdminBusinesses: React.FC = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-400">WhatsApp</label>
+                                    <label className="text-sm font-medium text-gray-400">País</label>
+                                    <input
+                                        type="text"
+                                        value={editingBusiness.country || 'Brasil'}
+                                        onChange={e => setEditingBusiness({ ...editingBusiness, country: e.target.value })}
+                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-400">Telefone / WhatsApp</label>
                                     <input
                                         type="text"
                                         value={editingBusiness.whatsapp}

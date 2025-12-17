@@ -20,6 +20,7 @@ interface AuthContextType {
     registerLead: (data: any) => Promise<void>;
     trackAction: (action_type: string, target_id?: string, details?: any) => Promise<void>;
     logout: () => Promise<void>;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,9 +43,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (res.ok) {
                         const data = await res.json();
                         setLeadProfile(data);
+                    } else if (res.status === 404) {
+                        // Auto-register if profile doesn't exist (e.g. Google Login first time)
+                        console.log("Lead profile not found, auto-registering...");
+                        const newLead = {
+                            uid: currentUser.uid,
+                            email: currentUser.email,
+                            name: currentUser.displayName || 'Usuário Google',
+                            phone: currentUser.phoneNumber || '',
+                            city: 'Indefinido',
+                            state: 'MG',
+                            referral_source: 'google_auth_auto'
+                        };
+
+                        const regRes = await fetch('/api/leads/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newLead)
+                        });
+
+                        if (regRes.ok) {
+                            console.log("Lead auto-registered successfully.");
+                            setLeadProfile(newLead);
+                        }
                     }
                 } catch (error) {
-                    console.error("Failed to fetch lead profile", error);
+                    console.error("Failed to fetch or create lead profile", error);
                 }
             } else {
                 localStorage.removeItem('authToken');
@@ -123,8 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLeadProfile(null);
     };
 
+    const refreshProfile = async () => {
+        if (!user) return;
+        try {
+            const res = await fetch(`/api/leads/${user.uid}`);
+            if (res.ok) {
+                const data = await res.json();
+                setLeadProfile(data);
+            }
+        } catch (error) {
+            console.error("Failed to refresh lead profile", error);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, leadProfile, loginWithGoogle, loginWithEmail, registerWithEmail, registerLead, trackAction, logout }}>
+        <AuthContext.Provider value={{ user, loading, leadProfile, loginWithGoogle, loginWithEmail, registerWithEmail, registerLead, trackAction, logout, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

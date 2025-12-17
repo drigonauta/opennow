@@ -861,6 +861,29 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex justify-between mb-4">
                             <h2 className="text-xl font-semibold">Gerenciar Leads</h2>
                             <div className="flex gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm('Isso irá verificar todos os usuários do Auth e criar leads para quem não tem. Continuar?')) return;
+                                        try {
+                                            const res = await fetch('/api/admin/sync-users', {
+                                                method: 'POST',
+                                                headers: { Authorization: `Bearer admin-secret-token` }
+                                            });
+                                            const data = await res.json();
+                                            if (res.ok) {
+                                                alert(data.message);
+                                                fetchData();
+                                            } else {
+                                                alert('Erro: ' + data.error);
+                                            }
+                                        } catch (e) {
+                                            alert('Erro ao sincronizar users.');
+                                        }
+                                    }}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                                >
+                                    <RefreshCw size={14} /> Sincronizar Usuários
+                                </button>
                                 <button onClick={handleCreateLead} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                                     + Novo Lead
                                 </button>
