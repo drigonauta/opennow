@@ -8,6 +8,7 @@ import { Zap, Upload, Image as ImageIcon } from 'lucide-react';
 export const AdBanner: React.FC = () => {
     const { activeAd } = useAds();
     const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     // Dynamic color for neon effect
     const neonColor = activeAd?.neonColor || '#00ff00';
@@ -32,20 +33,37 @@ export const AdBanner: React.FC = () => {
                         }}
                     ></div>
 
+                    {/* Preview Image if available */}
+                    {previewImage && (
+                        <div className="absolute inset-2 z-0 overflow-hidden rounded">
+                            <img
+                                src={previewImage}
+                                alt="Preview"
+                                className="w-full h-full object-cover opacity-60"
+                            />
+                            <div className="absolute top-2 right-2 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded">
+                                PRÉ-VISUALIZAÇÃO
+                            </div>
+                        </div>
+                    )}
+
                     {/* Placeholder Content */}
-                    <div className="relative z-10 p-8 flex flex-col items-center justify-center text-center opacity-80 group-hover:opacity-100 transition-opacity h-full">
-                        <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white mb-2 uppercase tracking-widest" style={{ textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>
-                            Sua Marca Aqui
-                        </h2>
-                        <div className="flex flex-col items-center gap-2">
-                            <p className="text-green-400 font-mono text-sm tracking-wider animate-pulse flex items-center gap-2">
-                                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <div className="relative z-10 p-8 flex flex-col items-center justify-center text-center opacity-90 group-hover:opacity-100 transition-opacity h-full gap-4">
+
+                        {/* Button moved UP as requested */}
+                        <span className="text-white font-bold text-sm bg-green-600/20 px-6 py-2 rounded-full border border-green-500/50 flex items-center gap-2 group-hover:bg-green-600 group-hover:text-white transition-all shadow-[0_0_15px_rgba(0,255,0,0.3)] animate-pulse">
+                            <Zap size={16} fill="currentColor" />
+                            Clique para Anunciar
+                        </span>
+
+                        <div className="flex flex-col items-center">
+                            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-white uppercase tracking-widest drop-shadow-lg" style={{ textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>
+                                Sua Marca Aqui
+                            </h2>
+                            <p className="text-green-400 font-mono text-sm tracking-widest flex items-center gap-2 mt-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
                                 DISPONÍVEL AGORA
                             </p>
-                            <span className="text-white font-bold text-sm bg-green-600/20 px-4 py-1.5 rounded-full border border-green-500/50 flex items-center gap-2 mt-2 group-hover:bg-green-600 group-hover:text-white transition-all">
-                                <Zap size={14} fill="currentColor" />
-                                Clique para Anunciar
-                            </span>
                         </div>
                     </div>
 
@@ -58,7 +76,10 @@ export const AdBanner: React.FC = () => {
                 </div>
 
                 {showPurchaseModal && (
-                    <AdPurchaseModal onClose={() => setShowPurchaseModal(false)} />
+                    <AdPurchaseModal
+                        onClose={() => setShowPurchaseModal(false)}
+                        onPreviewImage={(url) => setPreviewImage(url)}
+                    />
                 )}
             </>
         );
@@ -132,7 +153,12 @@ export const AdBanner: React.FC = () => {
     );
 };
 
-const AdPurchaseModal = ({ onClose }: { onClose: () => void }) => {
+interface AdPurchaseModalProps {
+    onClose: () => void;
+    onPreviewImage?: (url: string) => void;
+}
+
+const AdPurchaseModal = ({ onClose, onPreviewImage }: AdPurchaseModalProps) => {
     const { ads } = useAds();
     const [minutes, setMinutes] = useState(10);
     const [customer, setCustomer] = useState({ name: '', email: '', cpf: '' });
@@ -173,6 +199,7 @@ const AdPurchaseModal = ({ onClose }: { onClose: () => void }) => {
             if (!res.ok) throw new Error(data.error || 'Upload failed');
 
             setUploadedImageUrl(data.url);
+            if (onPreviewImage) onPreviewImage(data.url);
 
         } catch (error) {
             console.error('Error uploading image:', error);
