@@ -16,7 +16,7 @@ export const Footer: React.FC = () => {
                         Encontre o que está aberto agora, perto de você.
                     </p>
                     <p className="text-gray-600 text-xs mt-2">
-                        © 2024 <a href="https://www.openow.io" target="_blank" rel="noopener noreferrer" className="hover:text-ta-blue transition-colors">@openow.io</a>
+                        © 2024 <a href="https://www.taaberto.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-ta-blue transition-colors">@taaberto.com.br</a>
                     </p>
                 </div>
 
@@ -32,13 +32,11 @@ export const Footer: React.FC = () => {
                 <div>
                     <h4 className="text-white font-bold mb-2">Contato</h4>
                     <p className="text-gray-400 text-sm mb-1">Dúvidas ou Parcerias?</p>
-                    <a href="mailto:google@studio3d.com.br" className="text-gray-400 hover:text-white transition-colors block mb-4">
-                        google@studio3d.com.br
+                    <a href="mailto:contato@taaberto.com.br" className="text-gray-400 hover:text-white transition-colors block mb-4">
+                        contato@taaberto.com.br
                     </a>
 
-                    <a href="https://www.openow.io" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-opacity">
-                        <img src="/logo-opennow-v2.png" alt="OpenNow.io" className="h-8 object-contain" />
-                    </a>
+                    {/* Removed Openow Logo */}
                 </div>
 
             </div>

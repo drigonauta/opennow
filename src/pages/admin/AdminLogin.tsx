@@ -57,8 +57,10 @@ export default function AdminLogin() {
                     <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
                         <Lock className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Admin Access</h1>
-                    <p className="text-gray-400 text-sm mt-1">TáAberto Management System</p>
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-white mb-2">TáAberto Admin</h1>
+                        <p className="text-gray-400">Acesso restrito para administradores.</p>
+                    </div>
                 </div>
 
                 {error && (

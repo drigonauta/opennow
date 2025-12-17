@@ -25,8 +25,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [currentState, setCurrentState] = useState<string>(localStorage.getItem('openow_state') || 'MG');
-    const [currentCity, setCurrentCity] = useState<string>(localStorage.getItem('openow_city') || 'Uberaba');
+    const [currentState, setCurrentState] = useState<string>(localStorage.getItem('taaberto_state') || 'MG');
+    const [currentCity, setCurrentCity] = useState<string>(localStorage.getItem('taaberto_city') || 'Uberaba');
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
     // Removed auto-watch useEffect to prevent overriding selected city
@@ -34,8 +34,8 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     const setLocation = (state: string, city: string) => {
         setCurrentState(state);
         setCurrentCity(city);
-        localStorage.setItem('openow_state', state);
-        localStorage.setItem('openow_city', city);
+        localStorage.setItem('taaberto_state', state);
+        localStorage.setItem('taaberto_city', city);
     };
 
     const detectLocation = async () => {
